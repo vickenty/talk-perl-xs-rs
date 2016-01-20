@@ -1,0 +1,83 @@
+* Rust inside Perl
+* Make illegal states unrepresentable
+  you cannot construct values that contradict some desired invariants
+* Quotes
+  16:18 <@steveklabnik> the whole idea of rust is that 'well if i'm careful it's okay' is a bad strategy
+
+  The purpose of type systems goes far beyond type safety: They (also) serve to establish safe abstractions.
+
+  Types are extremely important because they prevent us from writing nonsense.
+
+  However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. We must do better.
+  -- Bjarne Stroustrup, 2015
+* XS example
+  #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
+    use inc::Module::Install;
+
+    name "Foo";
+    version "0.01";
+    abstract "";
+
+    WriteAll;
+  #+END_SRC
+  #+BEGIN_SRC c -n :tangle xs/Foo.xs :exports none
+    #define PERL_NO_GET_CONTEXT
+    #include "EXTERN.h"
+    #include "perl.h"
+    #include "XSUB.h"
+  #+END_SRC
+  #+BEGIN_SRC c +n :tangle xs/Foo.xs
+    MODULE = Foo    PACKAGE = Foo
+    int
+    badsub()
+      CODE:
+      {
+        AV *av = get_av("array", GV_ADD);
+        SV **svp = av_fetch(av, 0, 0);
+        IV val = SvIV(*svp);
+        PUSHMARK(SP);
+        call_pv("routine", G_DISCARD | G_VOID);
+        RETVAL = val * 2;
+      }
+      OUTPUT:
+        RETVAL
+  #+END_SRC
+* Perl
+  #+BEGIN_SRC perl -n :tangle lib/Foo.pm
+    package Foo;
+    use strict;
+    use feature 'say';
+
+    use XSLoader;
+
+    @Foo::array = (1, 2, 3);
+
+    sub routine {
+        @Foo::array = ();
+    }
+
+    XSLoader::load();
+
+    say Foo::badsub();
+
+    1;
+  #+END_SRC
+* Rust XS example
+  #+BEGIN_SRC rust -n :tangle rs/Foo.rs :exports none
+    #[macro_use]
+    extern crate perl_xs;
+    use perl_xs::prelude::*;
+  #+END_src
+  #+BEGIN_SRC rust +n :tangle rs/Foo.rs
+    XS! {
+        package Foo {
+            fn badsub(ctx) -> int {
+            let av = ctx.get_av("array", 0);
+                let sv = av.fetch(av, 0);
+                ctx.call_pv("routine", G_DISCARD | G_VOID);
+                return sv.iv() * 2;
+            }
+        }
+        bootstrap boot_Foo;
+    }
+  #+END_SRC
