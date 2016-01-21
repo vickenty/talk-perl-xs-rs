@@ -200,3 +200,13 @@
 ** libouroboros for perl macros
 ** perl-sys for function declarations
 ** perl-xs for safe wrappers
+* Drawbacks
+** Need to learn Rust
+** No direct access to Perl internals
+** Less efficient that pure C
+   * enum discriminator overhead
+   * perl context pointer in every Full<SV>
+   * macros not inlined
+   * safety imposed restrictions
+   * calls to Perl must catch exceptions
+** No ppport.h for easy forward/backward compatibility
