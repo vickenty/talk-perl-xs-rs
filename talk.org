@@ -87,8 +87,20 @@
 
     1;
   #+END_SRC
-* Rust XS example
-  #+BEGIN_SRC rust -n :tangle rs/Foo.rs :exports none
+* In Rust
+  #+BEGIN_SRC perl -n :tangle rs/Makefile.PL :exports none
+    use inc::Module::Install;
+
+    name "Foo";
+    version "0.01";
+    abstract "";
+
+    rust_use_perl_xs { path => "../../perl-xs" };
+    rust_write;
+
+    WriteAll;
+  #+END_SRC
+  #+BEGIN_SRC rust -n :tangle rs/src/lib.rs :exports none
     #[macro_use]
     extern crate perl_xs;
     use perl_xs::{ SV, AV, Scalar, Array };
