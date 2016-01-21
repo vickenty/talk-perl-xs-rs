@@ -91,18 +91,20 @@
   #+BEGIN_SRC rust -n :tangle rs/Foo.rs :exports none
     #[macro_use]
     extern crate perl_xs;
-    use perl_xs::prelude::*;
-  #+END_src
-  #+BEGIN_SRC rust +n :tangle rs/Foo.rs
+    use perl_xs::{ SV, AV, Scalar, Array };
+  #+END_SRC
+  #+BEGIN_SRC rust -n :tangle rs/src/lib.rs
     XS! {
         package Foo {
-            fn badsub(ctx) -> int {
-            let av = ctx.get_av("array", 0);
-                let sv = av.fetch(av, 0);
-                ctx.call_pv("routine", G_DISCARD | G_VOID);
-                return sv.iv() * 2;
+            sub badsub(ctx) {
+                let av: Option<AV> = ctx.get_av(cstr!("array"));
+                let av: AV = av.expect("array is missing");
+                let sv: Option<SV> = av.fetch(0);
+                let sv: SV = sv.expect("element is missing");
+                // ctx.new_call("routine").as_void().discard().call();
+                xs_return!(ctx, sv.to_iv() * 2);
             }
         }
-        bootstrap boot_Foo;
+        loader boot_Foo;
     }
   #+END_SRC
