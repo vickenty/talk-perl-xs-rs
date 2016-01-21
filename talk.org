@@ -87,6 +87,31 @@
 
     1;
   #+END_SRC
+* C example fixed
+  #+BEGIN_SRC c -n :tangle xs/FooFix.xs :exports none
+    #define PERL_NO_GET_CONTEXT
+    #include "EXTERN.h"
+    #include "perl.h"
+    #include "XSUB.h"
+  #+END_SRC
+  #+BEGIN_SRC c +n :tangle xs/FooFix.xs
+    MODULE = Foo    PACKAGE = Foo
+      int
+      badsub()
+        CODE:
+        {
+          AV *av = get_av("array", 0);
+          if (av == NULL) croak("array is missing");
+          SV **svp = av_fetch(av, 0, 0);
+          if (svp == NULL) croak("element is missing");
+          IV val = SvIV(*svp);
+          PUSHMARK(SP);
+          call_pv("routine", G_DISCARD | G_VOID);
+          RETVAL = val;
+        }
+        OUTPUT:
+          RETVAL
+  #+END_SRC
 * In Rust
   #+BEGIN_SRC perl -n :tangle rs/Makefile.PL :exports none
     use inc::Module::Install;
