@@ -112,6 +112,52 @@
         OUTPUT:
           RETVAL
   #+END_SRC
+* NULL pointers
+** =enum= type
+   #+BEGIN_SRC rust -n
+     enum Drinks {
+         Cola,
+         Beer,
+     }
+     let drink = Drinks::Cola;
+   #+END_SRC
+** With data
+   #+BEGIN_SRC rust -n
+     enum Drinks {
+         Cola,
+         Beer(String),
+     }
+     let drink = Drinks::Beer("Lager".to_string());
+   #+END_SRC
+   #+ATTR_REVEAL: :frag t
+   #+BEGIN_SRC rust +n
+     match drink {
+         Drinks::Cola => println!("Just cola"),
+         Drinks::Beer(ref name) => println!("{} beer", name),
+     }
+   #+END_SRC
+** Back to pointers
+   #+BEGIN_SRC rust -n
+     enum SafeSVPtr {
+         Null,
+         NotNull(*mut SV),
+     }
+   #+END_SRC
+** Using standard library
+   #+BEGIN_SRC rust -n
+     enum Option<T> {
+         None,
+         Some(T),
+     }
+   #+END_SRC
+** Useful methods
+   #+BEGIN_SRC rust
+     pub fn is_some(&self) -> bool;
+     pub fn is_none(&self) -> bool;
+     pub fn expect(self, msg: &str) -> T;
+     pub fn unwrap_or(self, def: T) -> T;
+    #+END_SRC
+    and more
 * In Rust
   #+BEGIN_SRC perl -n :tangle rs/Makefile.PL :exports none
     use inc::Module::Install;
