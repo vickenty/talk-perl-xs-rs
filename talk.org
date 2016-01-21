@@ -196,3 +196,7 @@
         loader boot_Foo;
     }
   #+END_SRC
+* Implementation details
+** libouroboros for perl macros
+** perl-sys for function declarations
+** perl-xs for safe wrappers
