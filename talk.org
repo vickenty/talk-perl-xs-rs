@@ -66,20 +66,22 @@
         RETVAL
   #+END_SRC
 * Perl
-  #+BEGIN_SRC perl -n :tangle lib/Foo.pm
+  #+BEGIN_SRC perl +n :tangle lib/Foo.pm :exports none
     package Foo;
     use strict;
+    use warnings;
     use feature 'say';
-
     use XSLoader;
+    XSLoader::load();
+  #+END_SRC
+  #+BEGIN_SRC perl +n :tangle lib/Foo.pm
+    package Foo;
 
-    @Foo::array = (1, 2, 3);
+    our @array = (1, 2, 3);
 
     sub routine {
-        @Foo::array = ();
+        @array = ();
     }
-
-    XSLoader::load();
 
     say Foo::badsub();
 
