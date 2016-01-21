@@ -1,4 +1,29 @@
 * Rust inside Perl
+#+STARTUP: overview hideblocks
+#+OPTIONS: num:nil toc:nil reveal_history:t reveal_title_slide:nil reveal_notes:t
+#+REVEAL_ROOT: node_modules/reveal.js
+#+REVEAL_THEME: black
+#+REVEAL_TRANS: fade
+#+REVEAL_EXTRA_CSS: talk.css
+#+REVEAL_MARGIN: 0.0
+#+HTML_HEAD: <link rel="stylesheet" href="notes.css"/>
+#+PROPERTY: mkdirp yes
+#+BEGIN_src elisp :exports none
+  (org-export-define-derived-backend 'html-notes 'html
+    :export-block '("NOTES")
+    :translate-alist
+    '((export-block . (lambda (el contents info)
+                        (if (string= (org-element-property :type el) "NOTES")
+                            (format "<div class=\"notes\">%s</div>"
+                                    (org-export-string-as
+                                     (org-element-property :value el)
+                                     'html
+                                     t)))))))
+  (org-export-to-buffer 'html-notes "*Org Notes Export*")
+#+END_src
+# Local Variables:
+# org-html-postamble: nil
+# End:
 * Make illegal states unrepresentable
   you cannot construct values that contradict some desired invariants
 * Quotes
