@@ -35,7 +35,7 @@
 
   However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. We must do better.
   -- Bjarne Stroustrup, 2015
-* XS example
+* C example
   #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
     use inc::Module::Install;
 
@@ -57,12 +57,10 @@
     badsub()
       CODE:
       {
-        AV *av = get_av("array", GV_ADD);
+        AV *av = get_av("array", 0);
         SV **svp = av_fetch(av, 0, 0);
-        IV val = SvIV(*svp);
-        PUSHMARK(SP);
         call_pv("routine", G_DISCARD | G_VOID);
-        RETVAL = val * 2;
+        RETVAL = SvIV(*svp);
       }
       OUTPUT:
         RETVAL
