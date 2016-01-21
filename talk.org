@@ -158,6 +158,11 @@
      pub fn unwrap_or(self, def: T) -> T;
     #+END_SRC
     and more
+* Safe wrappers
+** perl context and implic
+** full, bare and temp handles
+** conversion
+** refcounting and copying
 * In Rust
   #+BEGIN_SRC perl -n :tangle rs/Makefile.PL :exports none
     use inc::Module::Install;
