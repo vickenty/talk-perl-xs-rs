@@ -98,21 +98,24 @@
   #+END_SRC
   #+BEGIN_SRC c -n :tangle xs/FooFix.xs
     MODULE = Foo    PACKAGE = Foo
-      int
-      badsub()
-        CODE:
-        {
-          AV *av = get_av("array", 0);
-          if (av == NULL) croak("array is missing");
-          SV **svp = av_fetch(av, 0, 0);
-          if (svp == NULL) croak("element is missing");
-          IV val = SvIV(*svp);
-          PUSHMARK(SP);
-          call_pv("routine", G_DISCARD | G_VOID);
-          RETVAL = val;
-        }
-        OUTPUT:
-          RETVAL
+    int
+    badsub()
+      CODE:
+      {
+        AV *av = get_av("array", 0);
+        if (av == NULL) croak("array is missing");
+
+        SV **svp = av_fetch(av, 0, 0);
+        if (svp == NULL) croak("element is missing");
+
+        IV val = SvIV(*svp);
+
+        PUSHMARK(SP);
+        call_pv("routine", G_DISCARD | G_VOID);
+        RETVAL = val;
+      }
+      OUTPUT:
+        RETVAL
   #+END_SRC
 * NULL pointers
 ** =enum= type
