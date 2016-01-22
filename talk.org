@@ -35,6 +35,8 @@
 
   However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. We must do better.
   -- Bjarne Stroustrup, 2015
+* What is XS
+  why it is important
 * C example
   #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
     use inc::Module::Install;
