@@ -203,7 +203,15 @@
      /* ... */
      let num: IV = av_fetch(my_array, 1, 0);
    #+END_SRC
-** refcounting and copying
+** Refcounting and copying
+   #+BEGIN_SRC perl -n
+     my $x = $array[0];  # a copy of value
+     my $y = \$array[1]; # a reference
+   #+END_SRC
+   #+BEGIN_SRC c -n
+     SV* x = newSVsv(av_fetch(array, 0)); // copy
+     SV* y = SvREFCNT_inc(av_fetch(array, 1)); // reference (kinda)
+   #+END_SRC
 * In Rust
   #+BEGIN_SRC perl -n :tangle rs/Makefile.PL :exports none
     use inc::Module::Install;
