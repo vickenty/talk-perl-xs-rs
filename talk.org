@@ -245,6 +245,9 @@
         loader boot_Foo;
     }
   #+END_SRC
+  #+BEGIN_NOTES
+    http://is.gd/hDZvNU
+  #+END_NOTES
 * Implementation details
 ** libouroboros for perl macros
 ** perl-sys for function declarations
