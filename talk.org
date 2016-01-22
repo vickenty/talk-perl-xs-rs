@@ -24,9 +24,7 @@
 # Local Variables:
 # org-html-postamble: nil
 # End:
-* Make illegal states unrepresentable
-  you cannot construct values that contradict some desired invariants
-* Quotes
+* COMMENT Quotes
   16:18 <@steveklabnik> the whole idea of rust is that 'well if i'm careful it's okay' is a bad strategy
 
   The purpose of type systems goes far beyond type safety: They (also) serve to establish safe abstractions.
@@ -35,6 +33,8 @@
 
   However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. We must do better.
   -- Bjarne Stroustrup, 2015
+** Make illegal states unrepresentable
+   you cannot construct values that contradict some desired invariants
 * What is XS
   why it is important
 * C example
