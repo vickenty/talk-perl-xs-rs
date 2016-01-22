@@ -162,7 +162,21 @@
      pub fn expect(self, msg: &str) -> T;
      pub fn unwrap_or(self, def: T) -> T;
     #+END_SRC
-    and more
+    #+REVEAL_HTML: <table width="100%"><tr><td width="50%">
+    Rust
+    #+BEGIN_SRC rust
+      foo().expect("oh noes");
+
+      foo().unwrap_or("default value");
+    #+END_SRC
+    #+REVEAL_HTML: </td><td width="50%">
+    Perl
+    #+BEGIN_SRC perl
+      foo() or die "oh noes";
+
+      foo() // "default value";
+    #+END_SRC
+    #+REVEAL_HTML: </td></tr></table>
 * Safe wrappers
 ** perl context and implic
 ** full, bare and temp handles
