@@ -163,7 +163,46 @@
 * Safe wrappers
 ** perl context and implic
 ** full, bare and temp handles
-** conversion
+** Traits
+   #+BEGIN_SRC rust -n
+     struct Square { side: f32 }
+     struct Circle { radius: f32 }
+
+     trait Area {
+         fn area(&self) -> f32;
+     }
+
+     impl Area for Square {
+         fn area(&self) -> f32 {
+             self.side * self.side
+         }
+     }
+     impl Area for Circle {
+         fn area(&self) -> f32 {
+             self.radius * self.radius * 3.14
+         }
+     }
+   #+END_SRC
+** From
+   #+BEGIN_SRC rust -n
+     trait FromSV {
+         fn from(src: *mut SV) -> Self;
+     }
+
+     impl FromSV for IV {
+         fn from(src: *mut SV) -> IV { /* ... */ }
+     }
+     impl FromSV for NV {
+         fn from(src: *mut SV) -> NV { /* ... */ }
+     }
+
+     fn av_fetch<T: FromSV>(array: *mut AV, idx: IV) -> T {
+         T::from(perl_av_fetch(array, idx))
+     }
+
+     /* ... */
+     let num: IV = av_fetch(my_array, 1, 0);
+   #+END_SRC
 ** refcounting and copying
 * In Rust
   #+BEGIN_SRC perl -n :tangle rs/Makefile.PL :exports none
