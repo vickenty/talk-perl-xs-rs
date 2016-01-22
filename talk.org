@@ -187,10 +187,10 @@
     XS! {
         package Foo {
             sub badsub(ctx) {
-                let av: Option<AV> = ctx.get_av(cstr!("array"));
-                let av: AV = av.expect("array is missing");
-                let sv: Option<SV> = av.fetch(0);
-                let sv: SV = sv.expect("element is missing");
+                let av = ctx.get_av::<Option<AV>>(cstr!("array"))
+                            .expect("array is missing");
+                let sv = av.fetch::<Option<SV>>(0)
+                           .expect("element is missing");
                 // ctx.new_call("routine").as_void().discard().call();
                 xs_return!(ctx, sv.to_iv() * 2);
             }
