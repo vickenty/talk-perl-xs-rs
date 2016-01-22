@@ -68,7 +68,7 @@
         RETVAL
   #+END_SRC
 * Perl
-  #+BEGIN_SRC perl +n :tangle lib/Foo.pm :exports none
+  #+BEGIN_SRC perl -n :tangle lib/Foo.pm :exports none
     package Foo;
     use strict;
     use warnings;
@@ -76,7 +76,7 @@
     use XSLoader;
     XSLoader::load();
   #+END_SRC
-  #+BEGIN_SRC perl +n :tangle lib/Foo.pm
+  #+BEGIN_SRC perl -n :tangle lib/Foo.pm
     package Foo;
 
     our @array = (1, 2, 3);
@@ -96,7 +96,7 @@
     #include "perl.h"
     #include "XSUB.h"
   #+END_SRC
-  #+BEGIN_SRC c +n :tangle xs/FooFix.xs
+  #+BEGIN_SRC c -n :tangle xs/FooFix.xs
     MODULE = Foo    PACKAGE = Foo
       int
       badsub()
