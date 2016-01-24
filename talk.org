@@ -36,7 +36,7 @@
 ** Make illegal states unrepresentable
    you cannot construct values that contradict some desired invariants
 * What is XS
-  why it is important
+* What is Rust
 * C example
   #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
     use inc::Module::Install;
