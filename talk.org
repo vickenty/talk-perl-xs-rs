@@ -177,6 +177,55 @@
       foo() // "default value";
     #+END_SRC
     #+REVEAL_HTML: </td></tr></table>
+** Example
+   #+BEGIN_SRC perl -n :tangle rs-fail1/Makefile.PL :exports none
+     use inc::Module::Install;
+
+     name "Foo";
+     version "0.01";
+     abstract "";
+
+     rust_use_perl_xs { path => "../../perl-xs" };
+     rust_write;
+
+     WriteAll;
+   #+END_SRC
+   #+BEGIN_SRC rust :exports none :tangle rs-fail1/src/lib.rs
+     #[macro_use]
+     extern crate perl_xs;
+     use perl_xs::{ Array, SV, AV };
+     XS! {
+         package Test {
+             sub test (ctx) {
+   #+END_SRC
+   #+BEGIN_SRC rust -n :tangle rs-fail1/src/lib.rs
+     let av: Option<AV> = ctx.get_av(cstr!("array"));
+
+     let sv: Option<SV> = av.fetch(0);
+      
+   #+END_SRC
+   #+BEGIN_SRC rust :exports none :tangle rs-fail1/src/lib.rs
+             }
+         }
+         loader boot_Test;
+     }
+   #+END_SRC
+   #+BEGIN_SRC text
+     src/lib.rs:9:13: 9:21 error: no method named `fetch` found
+                                  for type `core::option::Option<_>`
+                                  in the current scope
+     src/lib.rs:9 let sv: Option<SV> = av.fetch(0);
+                                          ^~~~~~~~
+
+   #+END_SRC
+** Example
+   #+BEGIN_SRC rust -n
+     let av:        AV  = ctx.get_av(cstr!("array"))
+                             .expect("array is missing");
+     let sv:        SV  = av.fetch(0)
+                            .expect("element is missing");
+   #+END_SRC
+   #+REVEAL_HTML: <pre class="src src-text"><br><br><br><br><br></pre>
 * Safe wrappers
 ** perl context and implic
 ** full, bare and temp handles
