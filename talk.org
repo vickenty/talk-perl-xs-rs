@@ -1,4 +1,5 @@
 * Rust inside Perl
+  Writing Perl extensions using Rust instead of XS
 #+STARTUP: overview hideblocks
 #+OPTIONS: num:nil toc:nil reveal_history:t reveal_title_slide:nil reveal_notes:t
 #+REVEAL_ROOT: node_modules/reveal.js
@@ -36,7 +37,15 @@
 ** Make illegal states unrepresentable
    you cannot construct values that contradict some desired invariants
 * What is XS
+  #+BEGIN_NOTES
+  Perl is a high-level language, that allows us to write complicated programs easily, but it comes with a cost - it is somewhat slow, but most of the time it doesn't matter. Some things are very slow in Perl, like parsing binary protocols or doing complicated math. 
+
+  For these rare cases where performance matters, Perl has a C API and a set of supporting tools, known together as XS. The problem with XS is that we are programming in Perl because we don't want to program in C to begin with (perhaps because it is too low-level, error-prone or just unfamiliar).
+  #+END_NOTES
 * What is Rust
+  #+BEGIN_NOTES
+  Rust is a new programming language, that targets roughly the same niche as C++, being a low-level language with a lot of manual control over things, but still providing higher-level tools to the programmer. One of main goals of Rust eliminate bugs caused by improper use of memory pointers, the bane of all reasonably complicated C or C++ programs.
+  #+END_NOTES
 * C example
   #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
     use inc::Module::Install;
@@ -60,13 +69,22 @@
       CODE:
       {
         AV *av = get_av("array", 0);
-        SV **svp = av_fetch(av, 0, 0);
+        SV **svp = av_fetch(av, 0, 0);  // my $svp = $Foo::array[0];
         call_pv("routine", G_DISCARD | G_VOID);
         RETVAL = SvIV(*svp);
       }
       OUTPUT:
         RETVAL
   #+END_SRC
+  #+BEGIN_NOTES
+  A lot of XS functions return a null pointer to signal an absense of value, which is a very common pattern in C. Documxentation often mentions when a null pointer may be returned or if it acceptable as a parameter, but compilers do not read documentation and won't warn the developer if a pointer value is used inaproppriately.
+
+  On the slide is a simple XS function that, despite being 4 lines long, can crash in a number of different ways, taking the whole interpreter with it each time.
+
+  =get_av()= on line 6 returns a pointer to a global array variable and will return a null pointer if variable does not exist. =av_fetch()= on line 7 tries to get an element 0 from the array, and will crash if array pointer is null. =av_fetch()= will return a null pointer itself if the array is empty. On line 9 we call =SvIV()= to get the integer value of the array's element and it will crash too if the svp is null.
+
+  But before that, on line 8, we call a perl sub called =routine=, which can introduce yet another bug in the code. Perl intentionally does not track pointers returned by get_av or av_fetch, so it doesn't know we still have them around and if routine, say, empties the array...
+  #+END_NOTES
 * Perl
   #+BEGIN_SRC perl -n :tangle lib/Foo.pm :exports none
     package Foo;
@@ -89,6 +107,9 @@
 
     1;
   #+END_SRC
+  #+BEGIN_NOTES
+  ...which it of course does (this is an example after all), we get another kind of error, a dangling pointer - it is not null, but points to a region of memory that was returned to the operating system and our program crashes again.
+  #+END_NOTES
 * C example fixed
   #+BEGIN_SRC c -n :tangle xs/FooFix.xs :exports none
     #define PERL_NO_GET_CONTEXT
@@ -117,7 +138,13 @@
       OUTPUT:
         RETVAL
   #+END_SRC
+  #+BEGIN_NOTES
+  To fix these problems we have to check all returned values and to make sure that we read svp as soon as we get it, before calling the routine. Rust won't do these things for us, but it can make sure we don't forget to check things that need to be checked.
+  #+END_NOTES
 * NULL pointers
+  #+BEGIN_NOTES
+  Lets deal with null pointers first.
+  #+END_NOTES
 ** =enum= type
    #+BEGIN_SRC rust -n
      enum Drinks {
@@ -126,6 +153,9 @@
      }
      let drink = Drinks::Cola;
    #+END_SRC
+   #+BEGIN_NOTES
+   If you have worked with C, enum will look familiar. Here =Drinks= is a type that has only two possible values, =Cola= and =Beer=. We can make variable of =Drinks= and assign it one of the two values.
+   #+END_NOTES
 ** With data
    #+BEGIN_SRC rust -n
      enum Drinks {
@@ -134,13 +164,19 @@
      }
      let drink = Drinks::Beer("Lager".to_string());
    #+END_SRC
+   #+BEGIN_NOTES
+   Enum variants in Rust can have additional data associated with them. Here, Cola is still a simple value, but Beer also has a String describing what kind of beer it is.
+   #+END_NOTES
    #+ATTR_REVEAL: :frag t
    #+BEGIN_SRC rust +n
      match drink {
          Drinks::Cola => println!("Just cola"),
-         Drinks::Beer(ref name) => println!("{} beer", name),
+         Drinks::Beer(ref kind) => println!("{} beer", kind),
      }
    #+END_SRC
+   #+BEGIN_NOTES
+   The only way Rust allows us to access that string, is to check that drink is indeed a Beer. =match= operator is one way to do this. On the left side listed are enum variants, and on the right after the arrow code that will be executed in that case. If a variant has associated data, we can assign it to a variable, but it is important to note this variable only exists in one particular case.
+   #+END_NOTES
 ** Back to pointers
    #+BEGIN_SRC rust -n
      enum SafeSVPtr {
@@ -148,6 +184,9 @@
          NotNull(*mut SV),
      }
    #+END_SRC
+   #+BEGIN_NOTES
+   Just what we need to avoid null pointers. Instead of returning a pointer directly, we can put it inside an enum with a separate case for null, and dereferencing null pointer becomes impossible. This pattern applies not only to pointers of course, and is useful in so many different situations...
+   #+END_NOTES
 ** Using standard library
    #+BEGIN_SRC rust -n
      enum Option<T> {
@@ -155,28 +194,38 @@
          Some(T),
      }
    #+END_SRC
+   #+BEGIN_NOTES
+   ...that Rust has enum just like that in the standard library. Letter 'T' in angle brackets on line 1 is called type parameter, which allows Option to hold all kinds of different types. match operator is often too bulky and verbose, so option comes with a variety of...
+   #+END_NOTES
 ** Useful methods
+   #+REVEAL_HTML: <table width="100%"><tr><td width="50%">
+   Rust
    #+BEGIN_SRC rust
-     pub fn is_some(&self) -> bool;
-     pub fn is_none(&self) -> bool;
-     pub fn expect(self, msg: &str) -> T;
-     pub fn unwrap_or(self, def: T) -> T;
-    #+END_SRC
-    #+REVEAL_HTML: <table width="100%"><tr><td width="50%">
-    Rust
-    #+BEGIN_SRC rust
-      foo().expect("oh noes");
+      foo.is_some()
 
-      foo().unwrap_or("default value");
-    #+END_SRC
-    #+REVEAL_HTML: </td><td width="50%">
-    Perl
-    #+BEGIN_SRC perl
-      foo() or die "oh noes";
+      foo.expect("oh noes")
 
-      foo() // "default value";
+      foo.unwrap_or("default value")
+   #+END_SRC
+   #+BEGIN_NOTES
+   ...useful methods. Here are a couple of examples, but there are many more. =is_some()= will return boolean true if foo is Some, =expect()= returns the value if there is one and throws a runtime exception if there isn't and =unwrap_or()= returns the value from Some or a default value provided by the caller.
+   #+END_NOTES
+
+   #+REVEAL_HTML: </td><td width="50%">
+   #+ATTR_REVEAL: :frag t
+   Perl
+   #+ATTR_REVEAL: :frag t
+   #+BEGIN_SRC perl
+      defined $foo
+
+      $foo or die "oh noes"
+
+      $foo // "default value"
     #+END_SRC
-    #+REVEAL_HTML: </td></tr></table>
+   #+REVEAL_HTML: </td></tr></table>
+   #+BEGIN_NOTES
+   Many of these functions have direct equivalent in Perl as well.
+   #+END_NOTES
 ** Example
    #+BEGIN_SRC perl -n :tangle rs-fail1/Makefile.PL :exports none
      use inc::Module::Install;
@@ -216,8 +265,10 @@
                                   in the current scope
      src/lib.rs:9 let sv: Option<SV> = av.fetch(0);
                                           ^~~~~~~~
-
    #+END_SRC
+   #+BEGIN_NOTES
+   So, the first two lines of the C example I started with end up looking like this in Rust. let keyword introduces new variables, then comes the variable name and its type after the colon. Variable types are optional most of the time, but here I write them for illustration. In Rust, both =get_av()= and =av_fetch()= return an Option instead of a pointer. And since av is an option, instead of the array, this code does not compile.
+   #+END_NOTES
 ** Example
    #+BEGIN_SRC rust -n
      let av:        AV  = ctx.get_av(cstr!("array"))
@@ -226,6 +277,9 @@
                             .expect("element is missing");
    #+END_SRC
    #+REVEAL_HTML: <pre class="src src-text"><br><br><br><br><br></pre>
+   #+BEGIN_NOTES
+   To fix the error we need to check if option contains the value we want, for example by using .expect() method. This code handles the possibility that array will be missing, and thus compiles without problem.
+   #+END_NOTES
 * Dangling pointers
 ** Traits
    #+BEGIN_SRC rust -n
