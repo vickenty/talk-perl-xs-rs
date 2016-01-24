@@ -226,9 +226,7 @@
                             .expect("element is missing");
    #+END_SRC
    #+REVEAL_HTML: <pre class="src src-text"><br><br><br><br><br></pre>
-* Safe wrappers
-** perl context and implic
-** full, bare and temp handles
+* Dangling pointers
 ** Traits
    #+BEGIN_SRC rust -n
      struct Square { side: f32 }
@@ -269,7 +267,7 @@
      /* ... */
      let num: IV = av_fetch(my_array, 1, 0);
    #+END_SRC
-** Refcounting and copying
+** FromSV for SV
    #+BEGIN_SRC perl -n
      my $x = $array[0];  # a copy of value
      my $y = \$array[1]; # a reference
