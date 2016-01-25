@@ -384,6 +384,7 @@
     #[macro_use]
     extern crate perl_xs;
     use perl_xs::{ SV, AV, Scalar, Array };
+    use perl_xs::raw::{ G_VOID, G_DISCARD };
   #+END_SRC
   #+BEGIN_SRC rust -n :tangle rs/src/lib.rs
     XS! {
@@ -393,7 +394,7 @@
                             .expect("array is missing");
                 let sv = av.fetch::<Option<SV>>(0)
                            .expect("element is missing");
-                // ctx.new_call("routine").as_void().discard().call();
+                ctx.call_pv(cstr!("routine"), G_VOID | G_DISCARD);
                 xs_return!(ctx, sv.to_iv());
             }
         }
@@ -421,6 +422,7 @@
    #+BEGIN_NOTES
    Rust bindings cover only documented public part of Perl's API, but in C it is possible to call any Perl internal function.
    #+END_NOTES
-** Rust supports far less platforms than Perl
+** COMMENT Rust supports far less platforms than Perl
    No IBM z/390, MS-DOS or HP-UX support
+** A new language to learn
 * Questions?
