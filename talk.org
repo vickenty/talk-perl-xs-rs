@@ -42,13 +42,20 @@
    you cannot construct values that contradict some desired invariants
 * What is XS
   #+BEGIN_NOTES
-  Perl is a high-level language, that allows us to write complicated programs easily, but it comes with a cost - it is somewhat slow. Most of the time it doesn't matter, but some things are very slow in Perl, like parsing binary protocols or doing complicated math.
+  Perl is a high-level language that allows us to write complicated programs easily, but it comes with a cost - it is somewhat slow. Most of the time it doesn't matter, but some things are very slow in Perl, like parsing binary protocols or doing complicated math.
 
-  For these rare cases where performance matters, Perl has a C API and a set of supporting tools, known together as XS. The problem with XS is that we are programming in Perl because we don't want to program in C to begin with (perhaps because it is too low-level, error-prone or just unfamiliar).
+  For these rare cases where performance matters, Perl has a C API and a set of supporting tools, known together as XS. It allows us to write very fast code that integrates nicely with Perl programs, but in return it exposes a lot Perl's internal workings and requires utmost care, since its very easy to break things.
   #+END_NOTES
+* A quote
+  #+BEGIN_QUOTE
+  However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. *We must do better.*
+  #+END_QUOTE
+  -- Bjarne Stroustrup et al, 2015
 * What is Rust
   #+BEGIN_NOTES
-  Rust is a new programming language, that targets roughly the same niche as C++, being a low-level language with a lot of manual control, while at the same time providing higher-level tools to the programmer. One of main goals of Rust eliminate bugs caused by improper use of memory pointers, the bane of all reasonably complicated C or C++ programs.
+  But the improvement, in my opinion, would be not C++ though, but Rust.
+
+  Rust is a new programming language, that targets roughly the same niche as C++, being a low-level language with a lot of manual control, while at the same time providing higher-level tools to the programmer. One of main goals of Rust is to eliminate bugs caused by improper use of memory pointers, the bane of all reasonably complicated C or C++ programs.
   #+END_NOTES
 * C example
   #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
@@ -81,13 +88,13 @@
         RETVAL
   #+END_SRC
   #+BEGIN_NOTES
-  A lot of XS functions return a null pointer to signal an absense of value, which is a very common pattern in C. Documxentation often mentions when a null pointer may be returned or if it acceptable as a parameter, but compilers do not read documentation and won't warn the developer if a pointer value is used inaproppriately.
-
   On the slide is a simple XS function that, despite being 4 lines long, can crash in a number of different ways, taking the whole interpreter with it each time.
 
-  =get_av()= on line 6 returns a pointer to a global array variable and will return a null pointer if variable does not exist. =av_fetch()= on line 7 tries to get an element 0 from the array, and will crash if array pointer is null. =av_fetch()= will return a null pointer itself if the array is empty. On line 9 we call =SvIV()= to get the integer value of the array's element and it will crash too if the svp is null.
+  A lot of XS functions return a null pointer to signal absense of value, which is a very common pattern in C. Zero is not a valid address, trying to read from it causes program to crash and programmers must be careful with them. Documentation often mentions when a null pointer may be returned or if it acceptable as a parameter, but compilers do not read documentation and won't warn the developer if a pointer value is used inaproppriately.
 
-  But before that, on line 8, we call a perl sub called =routine=, which can introduce yet another bug in the code. Perl intentionally does not track pointers returned by get_av or av_fetch, so it doesn't know we still have them around and if routine, say, empties the array...
+  =get_av()= on line 6 returns a pointer to a global array variable and will return a null pointer if variable "array" does not exist in the module. =av_fetch()= on line 7 tries to get an element 0 from the array, and will crash if =av= is null. =av_fetch()= will return a null pointer itself if the array is empty. On line 9 we call =SvIV()= to get the integer value of the array's element and it will crash too if the svp is null.
+
+  Before that, on line 8, we call a perl sub called =routine=, which can introduce yet another bug in the code. Perl intentionally does not track pointers returned by =get_av()= or =av_fetch()=, so it doesn't know we still have them around and if routine, say, empties the array...
   #+END_NOTES
 * Perl
   #+BEGIN_SRC perl -n :tangle lib/Foo.pm :exports none
@@ -143,7 +150,7 @@
         RETVAL
   #+END_SRC
   #+BEGIN_NOTES
-  To fix these problems we have to check all returned values and to make sure that we read svp as soon as we get it, before calling the routine. Rust won't do these things for us, but it can make sure we don't forget to check things that need to be checked.
+  To fix these problems we have to check all returned values and to make sure that we read svp as soon as we get it, before calling the routine. Rust won't do these things for us magically, but using Rust we can shape the API in the way that forces developer to check things that need checking, and gives them compile time errors if they don't.
   #+END_NOTES
 * NULL pointers
   #+BEGIN_NOTES
@@ -158,7 +165,7 @@
      let drink = Drinks::Cola;
    #+END_SRC
    #+BEGIN_NOTES
-   If you have worked with C, enum will look familiar. Here =Drinks= is a type that has only two possible values, =Cola= and =Beer=. We can make variable of =Drinks= and assign it one of the two values.
+   If you have worked with C, enum will look familiar. Here =Drinks= is a type that has only two possible values, =Cola= and =Beer=. We can make variable of =Drinks= and assign it one of the two values, but nothing else.
    #+END_NOTES
 ** With data
    #+BEGIN_SRC rust -n
@@ -179,7 +186,7 @@
      }
    #+END_SRC
    #+BEGIN_NOTES
-   The only way Rust allows us to access that string, is to check that drink is indeed a Beer. =match= operator is one way to do this. On the left side listed are enum variants, and on the right after the arrow code that will be executed in that case. If a variant has associated data, we can assign it to a variable, but it is important to note this variable only exists in one particular case.
+   The only way Rust allows us to access that string, is to check that drink is indeed a Beer. =match= operator is one way to do this. On the left side listed are enum variants, and on the right after the arrow is code that will be executed in that case. If a variant has associated data, we can assign it to a variable, but this variable only exists inside the Beer branch and Cola branch can not see it.
    #+END_NOTES
 ** Back to pointers
    #+BEGIN_SRC rust -n
@@ -189,7 +196,7 @@
      }
    #+END_SRC
    #+BEGIN_NOTES
-   Just what we need to avoid null pointers. Instead of returning a pointer directly, we can put it inside an enum with a separate case for null, and dereferencing null pointer becomes impossible. This pattern applies not only to pointers of course, and is useful in so many different situations...
+   Just what we need to avoid null pointers. Instead of returning a pointer directly, we can put it inside an enum with a separate case for null and dereferencing null pointer becomes impossible. This pattern applies not only to pointers of course, and is useful in so many different situations...
    #+END_NOTES
 ** Using standard library
    #+BEGIN_SRC rust -n
@@ -212,13 +219,11 @@
       foo.unwrap_or("default value")
    #+END_SRC
    #+BEGIN_NOTES
-   ...useful methods. Here are a couple of examples, but there are many more. =is_some()= will return boolean true if foo is Some, =expect()= returns the value if there is one and throws a runtime exception if there isn't and =unwrap_or()= returns the value from Some or a default value provided by the caller.
+   ...useful methods. Here are a couple of examples, but there are many more. =is_some()= will return boolean true if foo is Some, =expect()= returns the value if there is one and throws a runtime exception if there isn't, and =unwrap_or()= returns the value from Some or a default value provided by the caller.
    #+END_NOTES
 
    #+REVEAL_HTML: </td><td width="50%">
-   #+ATTR_REVEAL: :frag t
    Perl
-   #+ATTR_REVEAL: :frag t
    #+BEGIN_SRC perl
       defined $foo
 
@@ -228,7 +233,7 @@
     #+END_SRC
    #+REVEAL_HTML: </td></tr></table>
    #+BEGIN_NOTES
-   Many of these functions have direct equivalent in Perl as well.
+   Many of these functions have direct equivalents in Perl as well.
    #+END_NOTES
 ** Example
    #+BEGIN_SRC perl -n :tangle rs-fail1/Makefile.PL :exports none
@@ -271,7 +276,7 @@
                                           ^~~~~~~~
    #+END_SRC
    #+BEGIN_NOTES
-   So, the first two lines of the C example I started with end up looking like this in Rust. let keyword introduces new variables, then comes the variable name and its type after the colon. Variable types are optional most of the time, but here I write them for illustration. In Rust, both =get_av()= and =av_fetch()= return an Option instead of a pointer. And since av is an option, instead of the array, this code does not compile.
+   So, the first two lines of the C example I started with end up looking like this in Rust. let keyword introduces new variables, then comes the variable name and its type after the colon. Variable types are optional most of the time, but here I write them for illustration. In Rust, both =get_av()= and =av_fetch()= return an Option instead of a pointer. And since av is an option, not an array, this code does not compile.
    #+END_NOTES
 ** Example
    #+BEGIN_SRC rust -n
@@ -288,11 +293,11 @@
   #+BEGIN_SRC c -n
         SV **svp = av_fetch(av, 0, 0);
         if (svp == NULL) croak("element is missing");
-
+        // undef @av
         IV val = SvIV(*svp);
   #+END_SRC
   #+BEGIN_NOTES
-  Next come the dangling pointer problem, when we have the pointer to a memory region that is already freed. Perl uses reference counting to make sure it doesn't free memory that someone has a pointer to, but, unfortunately, it doesn't help here. What we have is a pointer to a pointer to an SV, and while we can tell Perl to keep that SV around, we can't prevent Perl from freeing array itself if someone does =undef= on it. The only really safe thing to do is to read =svp= as soon as we checked that it is not null.
+  Next come the dangling pointer problem, when we a the pointer to already freed memory. Perl uses reference counting to make sure it doesn't free memory that someone has a pointer to, but, unfortunately, it doesn't help help here. What we have is a pointer to a pointer to an SV, and while we can tell Perl to keep that SV around, we can't prevent Perl from freeing array itself if someone does =undef= on it. The only really safe thing to do is to read =svp= as soon as we checked that it is not null.
   #+END_NOTES
 ** Traits
    #+BEGIN_SRC rust -n
@@ -313,9 +318,13 @@
              self.radius * self.radius * 3.14
          }
      }
+
+     fn print_area<T: Area>(shape: Area) {
+         println!("Your area is {} cm²", shape.area());
+     }
    #+END_SRC
    #+BEGIN_NOTES
-   Trait tells the compiler about what methods a type provides. We start by defining new simple struct types, and a trait called Area on line 4, that has a single method called area. Following are two Area implementations for different types. There is fine print, but you can implement a trait for any type, even a built-in one.
+   Trait tells the compiler about what methods a type provides. We start by defining new simple struct types, and a trait called Area on line 4, that has a single method called area. Following are two Area implementations for different types. There is fine print, but you can implement a trait for any type, even a built-in one. Traits are useful because they allow us to restrict number of types a generic function will work with. =print_area()= function on line 19 can work with both Squares and Circles, but calling it with something else will result in a compile-time error.
    #+END_NOTES
 ** From
    #+BEGIN_SRC rust -n
@@ -339,7 +348,7 @@
      let num: IV = av_fetch(my_array, 0);
    #+END_SRC
    #+BEGIN_NOTES
-   Traits are useful because they allow us to restrict number of types a generic function will work with. Here, we define a trait FromSV, which describes a conversion from a raw SV pointer we got from the array into a safe value. We have two conversions defined, one for integers and another for floating point values. Line 12 is where the magic happens: we define a generic function =av_fetch()=, which can return any type 'T', as long as it implements =FromSV=, in other words, any type that can be produced from an SV. What T will be exactly is decided by the caller. On line 18 we use =av_fetch()= to get an integer value, T will be substituted with =IV= and method =from= on line 6 is called.
+   Here, we define a trait FromSV, which describes a conversion from a raw SV pointer we got from the array into a safe value. We have two conversions defined, one for integers and another for floating point values. Line 12 is where the magic happens: we define a generic function =av_fetch()=, which can return any type 'T', as long as it implements =FromSV=, in other words, any type that can be produced from an SV. What T will be exactly is decided by the caller. On line 18 we use =av_fetch()= to get an integer value, T will be substituted with =IV= and method =from= on line 6 is called.
    #+END_NOTES
 ** FromSV for SV
    #+BEGIN_SRC perl -n
@@ -351,7 +360,7 @@
      SV* y = SvREFCNT_inc(av_fetch(array, 1)); // reference (kinda)
    #+END_SRC
    #+BEGIN_NOTES
-   Of course, developer may want to get an SV. We still need to read the double pointer, but then we can ask Perl to either make a new SV with the same value, or to  to keep original SV around by incrementing its reference count. Either is fine, but it needs to happen.
+   Of course, developer may want to get an SV directly. We still need to read the double pointer, but then we can ask Perl to either make a new SV with the same value, or to to keep original SV around by incrementing its reference count. Either is fine, but it needs to happen. 
    #+END_NOTES
 * In Rust
   #+BEGIN_SRC perl -n :tangle rs/Makefile.PL :exports none
@@ -401,11 +410,11 @@
   #+END_NOTES
 ** Exception handling
    #+BEGIN_NOTES
-   Unless solved, this is a show stopper. Both Perl and Rust have their own ways of dealing with exceptions, which are, of course, not compatible with each other, and if any of Perl API method dies, it goes directly to the closest Perl eval, skipping all destructors Rust normally does on stack unwinding. Not only this may leak memory, Rust standard library often relies on destructors to do things safely, and skipping any of that code is a very bad idea.
+   Both Perl and Rust have their own ways of dealing with exceptions, which are, of course, not compatible with each other, and if any of Perl API method dies, it goes directly to the closest Perl eval, skipping all cleanup and destructor calls Rust must do when function returns. Not only this may leak memory, Rust standard library often relies on destructors to do things safely, and skipping any of that code is a very bad idea.
    #+END_NOTES
 ** No direct access to Perl internals
    #+BEGIN_NOTES
-   Bindings are maintained only for functions explicitly declared as part of the public Perl API, but in C it is possible to call any Perl internal function.
+   Rust bindings cover only documented public part of Perl's API, but in C it is possible to call any Perl internal function.
    #+END_NOTES
 ** Rust supports far less platforms than Perl
    No IBM z/390, MS-DOS or HP-UX support
