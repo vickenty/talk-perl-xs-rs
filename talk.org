@@ -319,7 +319,7 @@
          }
      }
 
-     fn print_area<T: Area>(shape: Area) {
+     fn print_area<T: Area>(shape: T) {
          println!("Your area is {} cm²", shape.area());
      }
    #+END_SRC
