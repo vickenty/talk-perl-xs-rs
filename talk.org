@@ -1,5 +1,9 @@
 * Rust inside Perl
-  Writing Perl extensions using Rust instead of XS
+  Vickenty Fesunov
+
+  #+INCLUDE: email.txt
+
+  github.com/vickenty
 #+STARTUP: overview hideblocks
 #+OPTIONS: num:nil toc:nil reveal_history:t reveal_title_slide:nil reveal_notes:t
 #+REVEAL_ROOT: node_modules/reveal.js
@@ -38,13 +42,13 @@
    you cannot construct values that contradict some desired invariants
 * What is XS
   #+BEGIN_NOTES
-  Perl is a high-level language, that allows us to write complicated programs easily, but it comes with a cost - it is somewhat slow, but most of the time it doesn't matter. Some things are very slow in Perl, like parsing binary protocols or doing complicated math. 
+  Perl is a high-level language, that allows us to write complicated programs easily, but it comes with a cost - it is somewhat slow. Most of the time it doesn't matter, but some things are very slow in Perl, like parsing binary protocols or doing complicated math.
 
   For these rare cases where performance matters, Perl has a C API and a set of supporting tools, known together as XS. The problem with XS is that we are programming in Perl because we don't want to program in C to begin with (perhaps because it is too low-level, error-prone or just unfamiliar).
   #+END_NOTES
 * What is Rust
   #+BEGIN_NOTES
-  Rust is a new programming language, that targets roughly the same niche as C++, being a low-level language with a lot of manual control over things, but still providing higher-level tools to the programmer. One of main goals of Rust eliminate bugs caused by improper use of memory pointers, the bane of all reasonably complicated C or C++ programs.
+  Rust is a new programming language, that targets roughly the same niche as C++, being a low-level language with a lot of manual control, while at the same time providing higher-level tools to the programmer. One of main goals of Rust eliminate bugs caused by improper use of memory pointers, the bane of all reasonably complicated C or C++ programs.
   #+END_NOTES
 * C example
   #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
