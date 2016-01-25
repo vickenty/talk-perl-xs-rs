@@ -422,7 +422,7 @@
    #+BEGIN_NOTES
    Rust bindings cover only documented public part of Perl's API, but in C it is possible to call any Perl internal function.
    #+END_NOTES
-** COMMENT Rust supports far less platforms than Perl
+** Rust supports far less platforms than Perl
    No IBM z/390, MS-DOS or HP-UX support
 ** A new language to learn
 * Questions?
