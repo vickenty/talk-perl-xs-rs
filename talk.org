@@ -359,6 +359,11 @@
      SV* x = newSVsv(av_fetch(array, 0)); // copy
      SV* y = SvREFCNT_inc(av_fetch(array, 1)); // reference (kinda)
    #+END_SRC
+   #+BEGIN_SRC rust -n
+     impl FromSV for *mut SV {
+         fn from(src: *mut SV) -> *mut SV { newSVsv(src) }
+     }
+   #+END_SRC
    #+BEGIN_NOTES
    Of course, developer may want to get an SV directly. We still need to read the double pointer, but then we can ask Perl to either make a new SV with the same value, or to to keep original SV around by incrementing its reference count. Either is fine, but it needs to happen. 
    #+END_NOTES
