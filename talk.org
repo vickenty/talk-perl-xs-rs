@@ -271,11 +271,11 @@
      }
    #+END_SRC
    #+BEGIN_SRC text
-     src/lib.rs:9:13: 9:21 error: no method named `fetch` found
-                                  for type `core::option::Option<_>`
-                                  in the current scope
-     src/lib.rs:9 let sv: Option<SV> = av.fetch(0);
-                                          ^~~~~~~~
+     src/lib.rs:10:13: 10:21 error: no method named `fetch` found
+                                    for type `core::option::Option<_>`
+                                    in the current scope
+     src/lib.rs:10 let sv: Option<SV> = av.fetch(0);
+                                           ^~~~~~~~
    #+END_SRC
    #+BEGIN_NOTES
    So, the first two lines of the C example I started with end up looking like this in Rust. let keyword introduces new variables, then comes the variable name and its type after the colon. Variable types are optional most of the time, but here I write them for illustration. In Rust, both =get_av()= and =av_fetch()= return an Option instead of a pointer. And since av is an option, not an array, this code does not compile.
