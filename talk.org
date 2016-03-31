@@ -73,6 +73,25 @@
 
     WriteAll;
   #+END_SRC
+  #+BEGIN_SRC perl -n :tangle lib/Foo.pm :exports none
+    package Foo;
+    use strict;
+    use warnings;
+    use feature 'say';
+
+    use XSLoader;
+    XSLoader::load();
+
+    our @array = (1, 2, 3);
+
+    sub routine {
+        @array = ();
+    }
+
+    say Foo::badsub();
+
+    1;
+  #+END_SRC
   #+BEGIN_SRC c -n :tangle xs/Foo.xs :exports none
     #define PERL_NO_GET_CONTEXT
     #include "EXTERN.h"
@@ -101,31 +120,10 @@
   =get_av()= on line 6 returns a pointer to a global array variable and will return a null pointer if variable "array" does not exist in the module. =av_fetch()= on line 7 tries to get an element 0 from the array, and will crash if =av= is null. =av_fetch()= will return a null pointer itself if the array is empty. On line 9 we call =SvIV()= to get the integer value of the array's element and it will crash too if the svp is null.
 
   Before that, on line 8, we call a perl sub called =routine=, which can introduce yet another bug in the code. Perl intentionally does not track pointers returned by =get_av()= or =av_fetch()=, so it doesn't know we still have them around and if routine, say, empties the array...
-  #+END_NOTES
-* Perl
-  #+BEGIN_SRC perl -n :tangle lib/Foo.pm :exports none
-    package Foo;
-    use strict;
-    use warnings;
-    use feature 'say';
-    use XSLoader;
-    XSLoader::load();
-  #+END_SRC
-  #+BEGIN_SRC perl -n :tangle lib/Foo.pm
-    package Foo;
 
-    our @array = (1, 2, 3);
 
-    sub routine {
-        @array = ();
-    }
 
-    say Foo::badsub();
 
-    1;
-  #+END_SRC
-  #+BEGIN_NOTES
-  ...which it of course does (this is an example after all), we get another kind of error, a dangling pointer - it is not null, but points to a region of memory that was returned to the operating system and our program crashes again.
   #+END_NOTES
 * C example fixed
   #+BEGIN_SRC c -n :tangle xs/FooFix.xs :exports none
