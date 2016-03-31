@@ -72,7 +72,7 @@
 
     our @array = (1, 2, 3);
 
-    sub routine {
+    sub undef_array {
         @array = ();
     }
 
@@ -94,7 +94,7 @@
       {
         AV *av = get_av("array", 0);
         SV **svp = av_fetch(av, 0, 0);  // my $svp = $Foo::array[0];
-        call_pv("routine", G_DISCARD | G_VOID);
+        call_pv("undef_array", G_DISCARD | G_VOID);
         RETVAL = SvIV(*svp);
       }
       OUTPUT:
@@ -145,7 +145,7 @@
         IV val = SvIV(*svp);
 
         PUSHMARK(SP);
-        call_pv("routine", G_DISCARD | G_VOID);
+        call_pv("undef_array", G_DISCARD | G_VOID);
         RETVAL = val;
       }
       OUTPUT:
@@ -299,7 +299,7 @@
   #+BEGIN_SRC c -n
         SV **svp = av_fetch(av, 0, 0);
         if (svp == NULL) croak("element is missing");
-        call_pv("routine", ...)
+        call_pv("undef_array", ...)
         IV val = SvIV(*svp); // boom
   #+END_SRC
   #+BEGIN_NOTES
@@ -409,7 +409,7 @@
                                 .expect("array is missing");
                 let iv: IV = av.fetch(0)
                                .expect("element is missing");
-                ctx.call_pv(cstr!("routine"), G_VOID | G_DISCARD);
+                ctx.call_pv(cstr!("undef_array"), G_VOID | G_DISCARD);
                 xs_return!(ctx, iv);
             }
         }
