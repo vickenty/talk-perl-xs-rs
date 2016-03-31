@@ -392,26 +392,32 @@
   #+BEGIN_SRC rust -n :tangle rs/src/lib.rs :exports none
     #[macro_use]
     extern crate perl_xs;
-    use perl_xs::{ SV, AV, Scalar, Array };
+    use perl_xs::{ IV, AV, Scalar, Array };
     use perl_xs::raw::{ G_VOID, G_DISCARD };
   #+END_SRC
   #+BEGIN_SRC rust -n :tangle rs/src/lib.rs
     XS! {
         package Foo {
             sub badsub(ctx) {
-                let av = ctx.get_av::<Option<AV>>(cstr!("array"))
-                            .expect("array is missing");
-                let sv = av.fetch::<Option<SV>>(0)
-                           .expect("element is missing");
+                let av: AV = ctx.get_av(cstr!("array"))
+                                .expect("array is missing");
+                let iv: IV = av.fetch(0)
+                               .expect("element is missing");
                 ctx.call_pv(cstr!("routine"), G_VOID | G_DISCARD);
-                xs_return!(ctx, sv.to_iv());
+                xs_return!(ctx, iv);
             }
         }
         loader boot_Foo;
     }
   #+END_SRC
   #+BEGIN_NOTES
-  Putting all things together we get this. On line 4 =get_av()= is called. This weird syntax with double colons is used to explicitly to specify type parameters for a generic function in cases where it cannot be inferred automatically, like this one. Then we fetch first from the array, telling Rust API to return an SV. This SV is copy of the SV in the array so it will stay around as long as needed, and we can safely call =routine= before converting array element into integer and returning. =xs_return!= is a Rust macro that handles pushing return values from the =badsub= to the Perl stack and doing type conversions and other necessary bookkeeping as well.
+  Combined it looks like this.
+
+  We can't just use result of =get_av()= as array, because it is an =Option= now, a different type. As shown before, it would be a compiler error if we tried.
+
+  API also forced me to decide early what I want to do with array element, so whatever happens inside =undef_array= does not matter.
+
+  =xs_return!= is a Rust macro that handles pushing return values from the =badsub= to the Perl stack and doing type conversions and other necessary bookkeeping as well.
   #+END_NOTES
 * COMMENT Call builder prototype.
     http://is.gd/hDZvNU
