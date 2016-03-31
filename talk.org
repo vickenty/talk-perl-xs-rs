@@ -295,11 +295,13 @@
   #+BEGIN_SRC c -n
         SV **svp = av_fetch(av, 0, 0);
         if (svp == NULL) croak("element is missing");
-        // undef @av
-        IV val = SvIV(*svp);
+        call_pv("routine", ...)
+        IV val = SvIV(*svp); // boom
   #+END_SRC
   #+BEGIN_NOTES
-  Next come the dangling pointer problem, when we a the pointer to already freed memory. Perl uses reference counting to make sure it doesn't free memory that someone has a pointer to, but, unfortunately, it doesn't help help here. What we have is a pointer to a pointer to an SV, and while we can tell Perl to keep that SV around, we can't prevent Perl from freeing array itself if someone does =undef= on it. The only really safe thing to do is to read =svp= as soon as we checked that it is not null.
+  Another problem in the original example was caused by holding to a pointer for too long.  Perl uses reference counting to make sure it doesn't free memory that someone has a pointer to, but, unfortunately, it doesn't help help here. What we have instead is a pointer to internal buffer of the array, and while we can tell Perl to keep SV and AV around, we can't prevent Perl from freeing the array buffer when someone does =undef= on the array variable. The only really safe thing to do is to use =svp= as soon as possible, either by converting it to a primitive value or by getting our SV and incrementing its reference count.
+
+  In Rust it is possible to make sure one of these things happen without unnecessary copying or reference counting with help of traits and some generic code.
   #+END_NOTES
 ** Traits
    #+BEGIN_SRC rust -n
