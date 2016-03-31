@@ -430,8 +430,9 @@
   This story would not be complete without mentioning some problems inherent to this approach.
   #+END_NOTES
 ** Exception handling
+   =panic= and =die=
    #+BEGIN_NOTES
-   Both Perl and Rust have their own ways of dealing with exceptions, which are, of course, not compatible with each other, and if any of Perl API method dies, it goes directly to the closest Perl eval, skipping all cleanup and destructor calls Rust must do when function returns. Not only this may leak memory, Rust standard library often relies on destructors to do things safely, and skipping any of that code is a very bad idea.
+   Both Rust and Perl have their own ways of dealing with exceptions, which are, of course, not compatible with each other. It is not clear yet, but I expect that making two systems work together will add quite a bit of overhead.
    #+END_NOTES
 ** No direct access to Perl internals
    #+BEGIN_NOTES
@@ -439,5 +440,11 @@
    #+END_NOTES
 ** Rust supports far less platforms than Perl
    No IBM z/390, MS-DOS or HP-UX support
-** A new language to learn
+   #+BEGIN_NOTES
+   Rust supports far fewer operating systems and processor architectures than Perl.
+   #+END_NOTES
+** New language
+   #+BEGIN_NOTES
+   And it is a big new language to learn.
+   #+END_NOTES
 * Questions?
