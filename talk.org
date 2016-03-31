@@ -152,11 +152,15 @@
         RETVAL
   #+END_SRC
   #+BEGIN_NOTES
-  To fix these problems we have to check all returned values and to make sure that we read svp as soon as we get it, before calling the routine. Rust won't do these things for us magically, but using Rust we can shape the API in the way that forces developer to check things that need checking, and gives them compile time errors if they don't.
+  To fix these problems we have to check all returned values and to make sure that we read =svp= as soon as we get it, before calling =undef_array=. Rust won't do these things for us magically, but with it we can shape the API in a way that guides programmers towards writing more correct code, and gives clear error messages when they don't follow the path.
   #+END_NOTES
 * NULL pointers
   #+BEGIN_NOTES
   Lets deal with null pointers first.
+
+  A lot of XS functions return a null pointer to represent absense of value, which is a very common pattern in C. For example =get_av= returns null when array does not exist. Documentation often mentions when a null pointer may be returned or if it acceptable as a parameter, but compilers do not read documentation and won't warn the developer of possible mistakes.
+
+  Rust has a different mechanism for this.
   #+END_NOTES
 ** =enum= type
    #+BEGIN_SRC rust -n
@@ -167,7 +171,7 @@
      let drink = Drinks::Cola;
    #+END_SRC
    #+BEGIN_NOTES
-   If you have worked with C, enum will look familiar. Here =Drinks= is a type that has only two possible values, =Cola= and =Beer=. We can make variable of =Drinks= and assign it one of the two values, but nothing else.
+   If you have worked with C, enum will look familiar. Here =Drinks= is a type that has only two possible values, =Cola= and =Beer=. We can make variable of type =Drinks= and assign it one of the two values.
    #+END_NOTES
 ** With data
    #+BEGIN_SRC rust -n
@@ -178,7 +182,7 @@
      let drink = Drinks::Beer("Lager".to_string());
    #+END_SRC
    #+BEGIN_NOTES
-   Enum variants in Rust can have additional data associated with them. Here, Cola is still a simple value, but Beer also has a String describing what kind of beer it is.
+   Enum variants can have data. Here, =Cola= is still a simple value, but =Beer= also has a =String= value attached describing what kind of beer it is.
    #+END_NOTES
    #+ATTR_REVEAL: :frag t
    #+BEGIN_SRC rust +n
@@ -188,7 +192,7 @@
      }
    #+END_SRC
    #+BEGIN_NOTES
-   The only way Rust allows us to access that string, is to check that drink is indeed a Beer. =match= operator is one way to do this. On the left side listed are enum variants, and on the right after the arrow is code that will be executed in that case. If a variant has associated data, we can assign it to a variable, but this variable only exists inside the Beer branch and Cola branch can not see it.
+   The only way Rust allows us to access that string, is to check that drink is indeed a Beer. =match= operator is one way to do this. =kind= will be set to string we passed to =Beer= constructor above and will be only visible in this branch.
    #+END_NOTES
 ** Back to pointers
    #+BEGIN_SRC rust -n
@@ -198,7 +202,7 @@
      }
    #+END_SRC
    #+BEGIN_NOTES
-   Just what we need to avoid null pointers. Instead of returning a pointer directly, we can put it inside an enum with a separate case for null and dereferencing null pointer becomes impossible. This pattern applies not only to pointers of course, and is useful in so many different situations...
+   Just what we need to avoid null pointers. Instead of returning a pointer directly, we can put it inside an enum with a separate case for null and dereferencing null pointer becomes impossible. This pattern applies not only to pointers of course, and is useful in so many different situations that Rust has enum just like that in the standard library.
    #+END_NOTES
 ** Using standard library
    #+BEGIN_SRC rust -n
@@ -208,7 +212,7 @@
      }
    #+END_SRC
    #+BEGIN_NOTES
-   ...that Rust has enum just like that in the standard library. Letter 'T' in angle brackets on line 1 is called type parameter, which allows Option to hold all kinds of different types. match operator is often too bulky and verbose, so option comes with a variety of...
+   Letter 'T' in angle brackets on line 1 is called type parameter, which allows Option to hold all kinds of different types.
    #+END_NOTES
 ** Useful methods
    #+REVEAL_HTML: <table width="100%"><tr><td width="50%">
@@ -235,7 +239,7 @@
     #+END_SRC
    #+REVEAL_HTML: </td></tr></table>
    #+BEGIN_NOTES
-   Many of these functions have direct equivalents in Perl as well.
+   =match= operator is often too bulky and verbose, so option comes with a variety of useful methods. Some of these methods have direct equivalents in Perl.
    #+END_NOTES
 ** Example
    #+BEGIN_SRC perl -n :tangle rs-fail1/Makefile.PL :exports none
@@ -278,7 +282,7 @@
                                            ^~~~~~~~
    #+END_SRC
    #+BEGIN_NOTES
-   So, the first two lines of the C example I started with end up looking like this in Rust. let keyword introduces new variables, then comes the variable name and its type after the colon. Variable types are optional most of the time, but here I write them for illustration. In Rust, both =get_av()= and =av_fetch()= return an Option instead of a pointer. And since av is an option, not an array, this code does not compile.
+   So, the first two lines of the C example I started with end up looking like this in Rust. =let= keyword introduces new variables. Variable types are optional most of the time, but here I write them for illustration. In Rust, both =get_av()= and =av_fetch()= return an Option instead of a pointer, and I get a nice error if I do something stupid.
    #+END_NOTES
 ** Example
    #+BEGIN_SRC rust -n
@@ -289,7 +293,7 @@
    #+END_SRC
    #+REVEAL_HTML: <pre class="src src-text"><br><br><br><br><br></pre>
    #+BEGIN_NOTES
-   To fix the error we need to check if option contains the value we want, for example by using .expect() method. This code handles the possibility that array will be missing, and thus compiles without problem.
+   To fix the error we need to check if option contains the value we want, for example by using =expect()= method. This code handles the possibility that array will be missing, and thus compiles without problem.
    #+END_NOTES
 * Dangling pointers
   #+BEGIN_SRC c -n
