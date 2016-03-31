@@ -183,8 +183,8 @@
    #+ATTR_REVEAL: :frag t
    #+BEGIN_SRC rust +n
      match drink {
-         Drinks::Cola => println!("Just cola"),
-         Drinks::Beer(ref kind) => println!("{} beer", kind),
+         Drinks::Cola       => println!("Just cola"),
+         Drinks::Beer(kind) => println!("{} beer", kind),
      }
    #+END_SRC
    #+BEGIN_NOTES
