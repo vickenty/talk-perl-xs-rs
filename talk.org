@@ -56,6 +56,9 @@
   However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. *We must do better.*
   #+END_QUOTE
   -- Bjarne Stroustrup et al, 2015
+  #+BEGIN_NOTES
+  However, experience also shows that "being careful" is a time sink and leaves serious errors in the code.
+  #+END_NOTES
 * What is Rust
   #+BEGIN_NOTES
   But the improvement, in my opinion, would be not C++ though, but Rust.
