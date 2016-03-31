@@ -61,9 +61,7 @@
   #+END_NOTES
 * What is Rust
   #+BEGIN_NOTES
-  But the improvement, in my opinion, would be not C++ though, but Rust.
-
-  Rust is a new programming language, that targets roughly the same niche as C++, being a low-level language with a lot of manual control, while at the same time providing higher-level tools to the programmer. One of main goals of Rust is to eliminate bugs caused by improper use of memory pointers, the bane of all reasonably complicated C or C++ programs.
+  One way to do better, in my opinion, could be Rust, a new programming language that targets the same niche as C++, but with a stronger focus on program correctness. What if we had a safer, simpler and higher-level, but still reasonably fast way to write Perl extensions?
   #+END_NOTES
 * C example
   #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
