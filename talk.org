@@ -331,31 +331,35 @@
    For example, we have two structs representing different geometric shapes, and a common trait =Area= that says that type must provide =area()= method. We have implementations of Area trait for both =Square= and =Circle=.
    =print_area()= function on line 19 can work with both squares and circles, but calling it with something else will result in a compile-time error.
    #+END_NOTES
-** From
+** FromSV
    #+BEGIN_SRC rust -n
      trait FromSV {
-         fn from(src: *mut SV) -> Self;
+         fn from_sv(src: *mut SV) -> Self;
      }
 
      impl FromSV for IV {
-         fn from(src: *mut SV) -> IV { SvIV(src) }
+         fn from_sv(src: *mut SV) -> IV { SvIV(src) }
      }
      impl FromSV for NV {
-         fn from(src: *mut SV) -> NV { SvNV(src) }
+         fn from_sv(src: *mut SV) -> NV { SvNV(src) }
      }
 
-     fn av_fetch<T: FromSV>(array: *mut AV, idx: IV) -> T {
-         let temp: *mut SV = perl_av_fetch(array, idx);
-         T::from(temp)
+     fn av_fetch_lvalue<T: FromSV>(array: *mut AV, idx: IV) -> T {
+         let temp: *mut SV = Perl_av_fetch(array, idx, 1);
+         return T::from_sv(temp);
      }
 
      /* ... */
-     let num: IV = av_fetch(my_array, 0);
+     let num: IV = av_fetch_lvalue(my_array, 0);
    #+END_SRC
    #+BEGIN_NOTES
-   Here, we define a trait FromSV, which describes a conversion from a raw SV pointer we got from the array into a safe value. We have two conversions defined, one for integers and another for floating point values. Line 12 is where the magic happens: we define a generic function =av_fetch()=, which can return any type 'T', as long as it implements =FromSV=, in other words, any type that can be produced from an SV. What T will be exactly is decided by the caller. On line 18 we use =av_fetch()= to get an integer value, T will be substituted with =IV= and method =from= on line 6 is called.
+   =FromSV= trait describes a type that can be constructed from a perl scalar value. Any type with this trait must provide =from_sv= function that will build that type from a scalar.
+
+   Line 12 is where the magic happens: we define a generic function =av_fetch_lvalue()=, which can return any type =T=, as long as it implements =FromSV=. What type =T= will be exactly is decided by the caller.
+
+   On line 18 we use =av_fetch_lvalue()= to get an integer value, thus =T= will be substituted with =IV= and =from_sv= defined on line 6 will be called.
    #+END_NOTES
-** FromSV for SV
+** COMMENT FromSV for SV
    #+BEGIN_SRC perl -n
      my $x = $array[0];  # copy
      my $y = \$array[1]; # reference
