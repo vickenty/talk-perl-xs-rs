@@ -45,7 +45,7 @@
   -- Bjarne Stroustrup, 2015
 ** Make illegal states unrepresentable
    you cannot construct values that contradict some desired invariants
-* What is XS
+* COMMENT What is XS
   #+BEGIN_NOTES
   Perl is a high-level language that allows us to write complicated programs easily, but it comes with a cost - it is somewhat slow. Most of the time it doesn't matter, but some things are very slow in Perl, like parsing binary protocols or doing complicated math.
 
