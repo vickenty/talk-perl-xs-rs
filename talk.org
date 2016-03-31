@@ -51,18 +51,6 @@
 
   For these rare cases where performance matters, Perl has a C API and a set of supporting tools, known together as XS. It allows us to write very fast code that integrates nicely with Perl programs, but in return it exposes a lot Perl's internal workings and requires utmost care, since its very easy to break things.
   #+END_NOTES
-* A quote
-  #+BEGIN_QUOTE
-  However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. *We must do better.*
-  #+END_QUOTE
-  -- Bjarne Stroustrup et al, 2015
-  #+BEGIN_NOTES
-  However, experience also shows that "being careful" is a time sink and leaves serious errors in the code.
-  #+END_NOTES
-* What is Rust
-  #+BEGIN_NOTES
-  One way to do better, in my opinion, could be Rust, a new programming language that targets the same niche as C++, but with a stronger focus on program correctness. What if we had a safer, simpler and higher-level, but still reasonably fast way to write Perl extensions?
-  #+END_NOTES
 * C example
   #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
     use inc::Module::Install;
@@ -113,17 +101,27 @@
         RETVAL
   #+END_SRC
   #+BEGIN_NOTES
-  On the slide is a simple XS function that, despite being 4 lines long, can crash in a number of different ways, taking the whole interpreter with it each time.
+  Let me start with a simple example.
 
-  A lot of XS functions return a null pointer to signal absense of value, which is a very common pattern in C. Zero is not a valid address, trying to read from it causes program to crash and programmers must be careful with them. Documentation often mentions when a null pointer may be returned or if it acceptable as a parameter, but compilers do not read documentation and won't warn the developer if a pointer value is used inaproppriately.
+  This short XS function pulls a finds a global array, reads element at index zero, calls a subroutine and then returns said element as integer. I made a couple of careless mistakes here: not checking return values from =get_av= and =av_fetch= for NULLs, and keeping SV pointer around longer than necessary.
 
-  =get_av()= on line 6 returns a pointer to a global array variable and will return a null pointer if variable "array" does not exist in the module. =av_fetch()= on line 7 tries to get an element 0 from the array, and will crash if =av= is null. =av_fetch()= will return a null pointer itself if the array is empty. On line 9 we call =SvIV()= to get the integer value of the array's element and it will crash too if the svp is null.
+  =get_av()= on line 6 returns a pointer to a global array variable and will return a null pointer if variable "array" does not exist in the module. =av_fetch()= on line 7 tries to get an element 0 from the array, and will crash if =av= is null. =av_fetch()= will return a null pointer itself if the array is empty. On line 9 we call =SvIV()= to get the integer value of the array's element and it will crash too if the =svp= is null.
 
-  Before that, on line 8, we call a perl sub called =routine=, which can introduce yet another bug in the code. Perl intentionally does not track pointers returned by =get_av()= or =av_fetch()=, so it doesn't know we still have them around and if routine, say, empties the array...
+  Before that, on line 8, we call a perl sub called =undef_array=, which can introduce yet another bug in the code. Perl intentionally does not track pointers returned by =get_av()= or =av_fetch()=, so it doesn't know we still have them around. If =undef_array= does what its name suggests, =svp= will be pointing to unused memory location and our program crashes again.
 
-
-
-
+  Of course, if I read docs and wrote my program more carefully all these bugs could have been avoided.
+  #+END_NOTES
+* A quote
+  #+BEGIN_QUOTE
+  However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. *We must do better.*
+  #+END_QUOTE
+  -- Bjarne Stroustrup et al, 2015
+  #+BEGIN_NOTES
+  However, experience also shows that "being careful" is a time sink and leaves serious errors in the code.
+  #+END_NOTES
+* What is Rust
+  #+BEGIN_NOTES
+  One way to do better, in my opinion, could be Rust, a new programming language that targets the same niche as C++, but with a stronger focus on program correctness. What if we had a safer, simpler and higher-level, but still reasonably fast way to write Perl extensions?
   #+END_NOTES
 * C example fixed
   #+BEGIN_SRC c -n :tangle xs/FooFix.xs :exports none
