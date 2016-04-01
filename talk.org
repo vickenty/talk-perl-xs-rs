@@ -3,7 +3,7 @@
 
   #+INCLUDE: email.txt
 
-  github.com/vickenty
+  github.com/vickenty/perl-xs
 
   #+BEGIN_NOTES
   I was playing with a Rust API for Perl for a while now, and even though it is still far from being ready, I'd like to share what's done so far and why I think it is a good idea.
@@ -454,3 +454,4 @@
    And it is a big new language to learn.
    #+END_NOTES
 * Questions?
+  https://github.com/vickenty/perl-xs
