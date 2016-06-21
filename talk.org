@@ -1,12 +1,14 @@
 * Writing Perl extensions in Rust
+
   Vickenty Fesunov
 
   #+INCLUDE: email.txt
 
-  github.com/vickenty/perl-xs
+  http://github.com/vickenty/perl-xs
 
   #+BEGIN_NOTES
-  I was playing with a Rust API for Perl for a while now, and even though it is still far from being ready, I'd like to share what's done so far and why I think it is a good idea.
+  name
+  job
   #+END_NOTES
 
 #+STARTUP: overview hideblocks
@@ -34,424 +36,297 @@
 # Local Variables:
 # org-html-postamble: nil
 # End:
-* COMMENT Quotes
-  16:18 <@steveklabnik> the whole idea of rust is that 'well if i'm careful it's okay' is a bad strategy
-
-  The purpose of type systems goes far beyond type safety: They (also) serve to establish safe abstractions.
-
-  Types are extremely important because they prevent us from writing nonsense.
-
-  However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. We must do better.
-  -- Bjarne Stroustrup, 2015
-** Make illegal states unrepresentable
-   you cannot construct values that contradict some desired invariants
-* COMMENT What is XS
+* We're hiring
+  http://workingatbooking.com
   #+BEGIN_NOTES
-  Perl is a high-level language that allows us to write complicated programs easily, but it comes with a cost - it is somewhat slow. Most of the time it doesn't matter, but some things are very slow in Perl, like parsing binary protocols or doing complicated math.
-
-  For these rare cases where performance matters, Perl has a C API and a set of supporting tools, known together as XS. It allows us to write very fast code that integrates nicely with Perl programs, but in return it exposes a lot Perl's internal workings and requires utmost care, since its very easy to break things.
+  come talk to us
   #+END_NOTES
-* C example
-  #+BEGIN_SRC perl :tangle xs/Makefile.PL :exports none
-    use inc::Module::Install;
-
-    name "Foo";
-    version "0.01";
-    abstract "";
-
-    WriteAll;
-  #+END_SRC
-  #+BEGIN_SRC perl -n :tangle lib/Foo.pm :exports none
-    package Foo;
-    use strict;
-    use warnings;
-    use feature 'say';
-
-    use XSLoader;
-    XSLoader::load();
-
-    our @array = (1, 2, 3);
-
-    sub undef_array {
-        @array = ();
-    }
-
-    say Foo::badsub();
-
-    1;
-  #+END_SRC
-  #+BEGIN_SRC c -n :tangle xs/Foo.xs :exports none
-    #define PERL_NO_GET_CONTEXT
-    #include "EXTERN.h"
-    #include "perl.h"
-    #include "XSUB.h"
-  #+END_SRC
-  #+BEGIN_SRC c +n :tangle xs/Foo.xs
-    MODULE = Foo    PACKAGE = Foo
-    int
-    badsub()
-      CODE:
-      {
-        AV *av = get_av("array", 0);
-        SV **svp = av_fetch(av, 0, 0);  // my $svp = $Foo::array[0];
-        call_pv("undef_array", G_DISCARD | G_VOID);
-        RETVAL = SvIV(*svp);
-      }
-      OUTPUT:
-        RETVAL
-  #+END_SRC
+* XS
   #+BEGIN_NOTES
-  Let me start with a simple example.
-
-  This short XS function pulls a finds a global array, reads element at index zero, calls a subroutine and then returns said element as integer. I made a couple of careless mistakes here: not checking return values from =get_av= and =av_fetch= for NULLs, and keeping SV pointer around longer than necessary.
-
-  =get_av()= on line 6 returns a pointer to a global array variable and will return a null pointer if variable "array" does not exist in the module. =av_fetch()= on line 7 tries to get an element 0 from the array, and will crash if =av= is null. =av_fetch()= will return a null pointer itself if the array is empty. On line 9 we call =SvIV()= to get the integer value of the array's element and it will crash too if the =svp= is null.
-
-  Before that, on line 8, we call a perl sub called =undef_array=, which can introduce yet another bug in the code. Perl intentionally does not track pointers returned by =get_av()= or =av_fetch()=, so it doesn't know we still have them around. If =undef_array= does what its name suggests, =svp= will be pointing to unused memory location and our program crashes again.
-
-  Of course, if I read docs and wrote my program more carefully all these bugs could have been avoided.
+  perl in c
+  great power great resp
+  perl checks, c assumes
   #+END_NOTES
-* A quote
+* C is not easy
+  #+BEGIN_NOTES
+  perl reference, c pointer deref
+  #+END_NOTES
+** null pointers
+   #+BEGIN_SRC c
+     AV* array = get_av("array", 0);
+     SV** item = av_fetch(array, 0);
+   #+END_SRC
+   #+BEGIN_NOTES
+   functions return null
+   dereferencing not okay
+   must check
+   #+END_NOTES
+** dangling pointers
+   #+BEGIN_SRC c
+     SV** item = av_fetch(array, 0);
+     av_clear(array);
+     char *buf = SvPV_nolen(*item);
+   #+END_SRC
+   #+BEGIN_NOTES
+   unlike perl, no refcount
+   must track lifetime
+   reading from released memory
+   #+END_NOTES
+** buffer overflows
+   #+BEGIN_SRC c
+     char *buf = SvPV_nolen(*item);
+     sprintf(buf, "%d", rand());
+   #+END_SRC
+   #+BEGIN_NOTES
+   keep track of size of memory
+   don't write things you don'w want overwritten
+   #+END_NOTES
+** and more
+   * uninitialized variables
+   * sequence points
+   * integer overflows
+   * aliasing rules
+   * data races
+   #+BEGIN_NOTES
+   15 pages
+   #+END_NOTES
+* Perl XS API is not easy
+** What does this function return?
+   #+BEGIN_SRC c
+     SSize_t av_len(AV* array_ptr);
+   #+END_SRC
+** reference counting
+   #+BEGIN_SRC c
+   XPUSHs(av_fetch(array, 0))
+   // but
+   XPUSHs(sv_2mortal(av_delete(array, 0)))
+   #+END_SRC
+   #+BEGIN_NOTES
+   same pointer, different actions
+   #+END_NOTES
+** exceptions
+   #+BEGIN_SRC c
+   FILE *f = fopen("output", "w");
+   fprintf(f, "%d", SvIV(value));
+   fclose(f);
+   #+END_SRC
+* Just be careful, okay?
+  #+BEGIN_NOTES
+  not to say perl, xs or c are bad
+  a lot to worry, stakes are high
+  #+END_NOTES
   #+BEGIN_QUOTE
-  However, experience also shows that “being careful” and extensive testing is a time sink. Often, these efforts also leave serious errors in the code, causing crashes and security violations. *We must do better.*
-  #+END_QUOTE
-  -- Bjarne Stroustrup et al, 2015
-  #+BEGIN_NOTES
-  However, experience also shows that "being careful" is a time sink and leaves serious errors in the code.
-  #+END_NOTES
-* What is Rust
-  #+BEGIN_NOTES
-  One way to do better, in my opinion, could be Rust, a new programming language that targets the same niche as C++, but with a stronger focus on program correctness. What if we had a safer, simpler and higher-level, but still reasonably fast way to write Perl extensions?
-  #+END_NOTES
-* C example fixed
-  #+BEGIN_SRC c -n :tangle xs/FooFix.xs :exports none
-    #define PERL_NO_GET_CONTEXT
-    #include "EXTERN.h"
-    #include "perl.h"
-    #include "XSUB.h"
-  #+END_SRC
-  #+BEGIN_SRC c -n :tangle xs/FooFix.xs
-    MODULE = Foo    PACKAGE = Foo
-    int
-    badsub()
-      CODE:
-      {
-        AV *av = get_av("array", 0);
-        if (av == NULL) croak("array is missing");
-
-        SV **svp = av_fetch(av, 0, 0);
-        if (svp == NULL) croak("element is missing");
-
-        IV val = SvIV(*svp);
-
-        PUSHMARK(SP);
-        call_pv("undef_array", G_DISCARD | G_VOID);
-        RETVAL = val;
-      }
-      OUTPUT:
-        RETVAL
-  #+END_SRC
-  #+BEGIN_NOTES
-  To fix these problems we have to check all returned values and to make sure that we read =svp= as soon as we get it, before calling =undef_array=. Rust won't do these things for us magically, but with it we can shape the API in a way that guides programmers towards writing more correct code, and gives clear error messages when they don't follow the path.
-  #+END_NOTES
-* NULL pointers
-  #+BEGIN_NOTES
-  Lets deal with null pointers first.
-
-  A lot of XS functions return a null pointer to represent absense of value, which is a very common pattern in C. For example =get_av= returns null when array does not exist. Documentation often mentions when a null pointer may be returned or if it acceptable as a parameter, but compilers do not read documentation and won't warn the developer of possible mistakes.
-
-  Rust has a different mechanism for this.
-  #+END_NOTES
-** =enum= type
+   We must do better.
+   #+END_QUOTE
+  --- Bjarne Stroustrup, 2015
+  #+REVEAL_HTML: <small> http://www.stroustrup.com/resource-model.pdf </small>
+* Rust
+  #+ATTR_REVEAL: :frag (reveal)
+  - unsafe code
+  - safe abstractions
+* Rust XS
+  safe code → no segfaults
+** sum array
    #+BEGIN_SRC rust -n
-     enum Drinks {
-         Cola,
-         Beer,
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+
+
+
+
+
+
+
+
+             xs_return!(ctx, 0.0);
+         }
      }
-     let drink = Drinks::Cola;
    #+END_SRC
-   #+BEGIN_NOTES
-   If you have worked with C, enum will look familiar. Here =Drinks= is a type that has only two possible values, =Cola= and =Beer=. We can make variable of type =Drinks= and assign it one of the two values.
-   #+END_NOTES
-** With data
+** sum array
    #+BEGIN_SRC rust -n
-     enum Drinks {
-         Cola,
-         Beer(String),
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+
+
+
+
+
+
+
+             xs_return!(ctx, 0.0);
+         }
      }
-     let drink = Drinks::Beer("Lager".to_string());
    #+END_SRC
-   #+BEGIN_NOTES
-   Enum variants can have data. Here, =Cola= is still a simple value, but =Beer= also has a =String= value attached describing what kind of beer it is.
-   #+END_NOTES
-   #+ATTR_REVEAL: :frag t
-   #+BEGIN_SRC rust +n
-     match drink {
-         Drinks::Cola       => println!("Just cola"),
-         Drinks::Beer(kind) => println!("{} beer", kind),
-     }
-   #+END_SRC
-   #+BEGIN_NOTES
-   The only way Rust allows us to access that string, is to check that drink is indeed a Beer. =match= operator is one way to do this. =kind= will be set to string we passed to =Beer= constructor above and will be only visible in this branch.
-   #+END_NOTES
-** Back to pointers
+** sum array
    #+BEGIN_SRC rust -n
-     enum SafeSVPtr {
-         Null,
-         NotNull(*mut SV),
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av();
+
+
+
+
+
+
+             xs_return!(ctx, 0.0);
+         }
      }
    #+END_SRC
-   #+BEGIN_NOTES
-   Just what we need to avoid null pointers. Instead of returning a pointer directly, we can put it inside an enum with a separate case for null and dereferencing null pointer becomes impossible. This pattern applies not only to pointers of course, and is useful in so many different situations that Rust has enum just like that in the standard library.
-   #+END_NOTES
-** Using standard library
+** sum array
    #+BEGIN_SRC rust -n
-     enum Option<T> {
-         None,
-         Some(T),
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av(); 
+             //   ERROR: AV expected, but have Option<AV>
+
+
+
+
+
+             xs_return!(ctx, 0.0);
+         }
      }
    #+END_SRC
-   #+BEGIN_NOTES
-   Letter 'T' in angle brackets on line 1 is called type parameter, which allows Option to hold all kinds of different types.
-   #+END_NOTES
-** Useful methods
-   #+REVEAL_HTML: <table width="100%"><tr><td width="50%">
-   Rust
-   #+BEGIN_SRC rust
-      foo.is_some()
+** sum array
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
 
-      foo.expect("oh noes")
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av().expect("not an array ref");
 
-      foo.unwrap_or("default value")
+
+
+
+
+
+             xs_return!(ctx, 0.0);
+         }
+     }
    #+END_SRC
-   #+BEGIN_NOTES
-   ...useful methods. Here are a couple of examples, but there are many more. =is_some()= will return boolean true if foo is Some, =expect()= returns the value if there is one and throws a runtime exception if there isn't, and =unwrap_or()= returns the value from Some or a default value provided by the caller.
-   #+END_NOTES
 
-   #+REVEAL_HTML: </td><td width="50%">
-   Perl
-   #+BEGIN_SRC perl
-      defined $foo
+** sum array
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
 
-      $foo or die "oh noes"
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av().expect("not an array ref");
+             let mut sum = 0.0;
+             for index in 0..array.top_index() + 1 {
+             
 
-      $foo // "default value"
-    #+END_SRC
-   #+REVEAL_HTML: </td></tr></table>
-   #+BEGIN_NOTES
-   =match= operator is often too bulky and verbose, so option comes with a variety of useful methods. Some of these methods have direct equivalents in Perl.
-   #+END_NOTES
-** Example
-   #+BEGIN_SRC perl -n :tangle rs-fail1/Makefile.PL :exports none
-     use inc::Module::Install;
 
-     name "Foo";
-     version "0.01";
-     abstract "";
-
-     rust_use_perl_xs { path => "../../perl-xs" };
-     rust_write;
-
-     WriteAll;
-   #+END_SRC
-   #+BEGIN_SRC rust :exports none :tangle rs-fail1/src/lib.rs
-     #[macro_use]
-     extern crate perl_xs;
-     use perl_xs::{ Array, SV, AV };
-     XS! {
-         package Test {
-             sub test (ctx) {
-   #+END_SRC
-   #+BEGIN_SRC rust -n :tangle rs-fail1/src/lib.rs
-     let av: Option<AV> = ctx.get_av(cstr!("array"));
-
-     let sv: Option<SV> = av.fetch(0);
-      
-   #+END_SRC
-   #+BEGIN_SRC rust :exports none :tangle rs-fail1/src/lib.rs
              }
-         }
-         loader boot_Test;
-     }
-   #+END_SRC
-   #+BEGIN_SRC text
-     src/lib.rs:10:13: 10:21 error: no method named `fetch` found
-                                    for type `core::option::Option<_>`
-                                    in the current scope
-     src/lib.rs:10 let sv: Option<SV> = av.fetch(0);
-                                           ^~~~~~~~
-   #+END_SRC
-   #+BEGIN_NOTES
-   So, the first two lines of the C example I started with end up looking like this in Rust. =let= keyword introduces new variables. Variable types are optional most of the time, but here I write them for illustration. In Rust, both =get_av()= and =av_fetch()= return an Option instead of a pointer, and I get a nice error if I do something stupid.
-   #+END_NOTES
-** Example
-   #+BEGIN_SRC rust -n
-     let av:        AV  = ctx.get_av(cstr!("array"))
-                             .expect("array is missing");
-     let sv:        SV  = av.fetch(0)
-                            .expect("element is missing");
-   #+END_SRC
-   #+REVEAL_HTML: <pre class="src src-text"><br><br><br><br><br></pre>
-   #+BEGIN_NOTES
-   To fix the error we need to check if option contains the value we want, for example by using =expect()= method. This code handles the possibility that array will be missing, and thus compiles without problem.
-   #+END_NOTES
-* Dangling pointers
-  #+BEGIN_SRC c -n
-        SV **svp = av_fetch(av, 0, 0);
-        if (svp == NULL) croak("element is missing");
-        call_pv("undef_array", ...)
-        IV val = SvIV(*svp); // boom
-  #+END_SRC
-  #+BEGIN_NOTES
-  Another problem in the original example was caused by holding to a pointer for too long.  Perl uses reference counting to make sure it doesn't free memory that someone has a pointer to, but, unfortunately, it doesn't help help here. What we have instead is a pointer to internal buffer of the array, and while we can tell Perl to keep SV and AV around, we can't prevent Perl from freeing the array buffer when someone does =undef= on the array variable. The only really safe thing to do is to use =svp= as soon as possible, either by converting it to a primitive value or by getting our SV and incrementing its reference count.
-
-  In Rust it is possible to make sure one of these things happen without unnecessary copying or reference counting with help of traits and some generic code.
-  #+END_NOTES
-** Traits
-   #+BEGIN_SRC rust -n
-     struct Square { side: f32 }
-     struct Circle { radius: f32 }
-
-     trait HasArea {
-         fn area(&self) -> f32;
-     }
-
-     impl HasArea for Square {
-         fn area(&self) -> f32 {
-             self.side * self.side
+             xs_return!(ctx, sum);
          }
      }
-     impl HasArea for Circle {
-         fn area(&self) -> f32 {
-             self.radius * self.radius * 3.14
+   #+END_SRC
+** sum array
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av().expect("not an array ref");
+             let mut sum = 0.0;
+             for index in 0..array.top_index() + 1 {
+                 if let Some(item) = array.fetch(index) {
+                     sum += item;
+                 }
+             }
+             xs_return!(ctx, sum);
          }
      }
-
-     fn print_area<T: HasArea>(shape: T) {
-         println!("Your area is {} cm²", shape.area());
-     }
    #+END_SRC
-   #+BEGIN_NOTES
-   Trait tells the compiler about methods a certain type has and are used to write code that works with different types.
+* Benchmarks
 
-   For example, we have two structs representing different geometric shapes, and a common trait =Area= that says that type must provide =area()= method. We have implementations of Area trait for both =Square= and =Circle=.
-   =print_area()= function on line 19 can work with both squares and circles, but calling it with something else will result in a compile-time error.
-   #+END_NOTES
-** FromSV
+** sum array elements
+   | Perl | 2.53s |  766% |
+   | Rust | 3.34s | 1012% |
+   | XS   | 0.33s |  100% |
+   #+TBLFM: $3 = 100 * $2 / @3$2 ; %d%%
+
+    
+
+** try/catch on every line
    #+BEGIN_SRC rust -n
-     trait FromSV {
-         fn from_sv(src: *mut SV) -> Self;
-     }
+     xs! {
+         package Array::Util;
 
-     impl FromSV for IV {
-         fn from_sv(src: *mut SV) -> IV { SvIV(src) }
-     }
-     impl FromSV for NV {
-         fn from_sv(src: *mut SV) -> NV { SvNV(src) }
-     }
-
-     fn av_fetch_lvalue<T: FromSV>(array: *mut AV, idx: IV) -> T {
-         let temp: *mut SV = Perl_av_fetch(array, idx, 1);
-         return T::from_sv(temp);
-     }
-
-     /* ... */
-     let num: IV = av_fetch_lvalue(my_array, 0);
-   #+END_SRC
-   #+BEGIN_NOTES
-   =FromSV= trait describes a type that can be constructed from a perl scalar value. Any type with this trait must provide =from_sv= function that will build that type from a scalar.
-
-   Line 12 is where the magic happens: we define a generic function =av_fetch_lvalue()=, which can return any type =T=, as long as it implements =FromSV=. What type =T= will be exactly is decided by the caller.
-
-   On line 18 we use =av_fetch_lvalue()= to get an integer value, thus =T= will be substituted with =IV= and =from_sv= defined on line 6 will be called.
-   #+END_NOTES
-** COMMENT FromSV for SV
-   #+BEGIN_SRC perl -n
-     my $x = $array[0];  # copy
-     my $y = \$array[1]; # reference
-   #+END_SRC
-   #+BEGIN_SRC c -n
-     SV* x = newSVsv(av_fetch(array, 0)); // copy
-     SV* y = SvREFCNT_inc(av_fetch(array, 1)); // reference (kinda)
-   #+END_SRC
-   #+BEGIN_SRC rust -n
-     impl FromSV for *mut SV {
-         fn from(src: *mut SV) -> *mut SV { newSVsv(src) }
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av().expect("not an array ref");
+             let mut sum = 0.0;
+             for index in 0..array.top_index() + 1 {
+                 if let Some(item) = array.fetch(index) {
+                     sum += item;
+                 }
+             }
+             xs_return!(ctx, sum);
+         }
      }
    #+END_SRC
-   #+BEGIN_NOTES
-   Of course, developer may want to get an SV directly. We still need to read the double pointer, but then we can ask Perl to either make a new SV with the same value, or to to keep original SV around by incrementing its reference count. Either is fine, but it needs to happen. 
-   #+END_NOTES
-* In Rust
-  #+BEGIN_SRC perl -n :tangle rs/Makefile.PL :exports none
-    use inc::Module::Install;
+** sum array elements
+   | Perl | 2.56s | 775% |
+   | Rust | 0.88s | 266% |
+   | XS   | 0.33s | 100% |
+   #+TBLFM: $3 = 100 * $2 / @3$2 ; %d%%
 
-    name "Foo";
-    version "0.01";
-    abstract "";
+   (without catching exceptions)
 
-    rust_use_perl_xs { path => "../../perl-xs" };
-    rust_write;
+** greatest common divisor
+   | Perl | 0.73s | 730% |
+   | Rust | 0.18s | 180% |
+   | XS   | 0.10s | 100% |
+   #+TBLFM: $3 = 100 * $2 / @3$2 ; %d%%
 
-    WriteAll;
+    
+
+** greatest common divisor
+   | Perl | 0.81s | 810% |
+   | Rust | 0.11s | 110% |
+   | XS   | 0.10s | 100% |
+   #+TBLFM: $3 = 100 * $2 / @3$2 ; %d%%
+
+   (without catching exceptions)
+
+* Conclusion
+  #+ATTR_REVEAL: :frag (reveal)
+  * it works
+  * it is safer
+  * it is slower
+
+* FIN
+  #+BEGIN_SRC rust
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av().expect("not an array ref");
+             let mut sum = 0.0;
+             for index in 0..array.top_index() + 1 {
+                 if let Some(item) = array.fetch(index) {
+                     sum += item;
+                 }
+             }
+             xs_return!(ctx, sum);
+         }
+     }
   #+END_SRC
-  #+BEGIN_SRC rust -n :tangle rs/src/lib.rs :exports none
-    #[macro_use]
-    extern crate perl_xs;
-    use perl_xs::{ IV, AV, Scalar, Array };
-    use perl_xs::raw::{ G_VOID, G_DISCARD };
-  #+END_SRC
-  #+BEGIN_SRC rust -n :tangle rs/src/lib.rs
-    XS! {
-        package Foo {
-            sub badsub(ctx) {
-                let av: AV = ctx.get_av(cstr!("array"))
-                                .expect("array is missing");
-                let iv: IV = av.fetch(0)
-                               .expect("element is missing");
-                ctx.call_pv(cstr!("undef_array"), G_VOID | G_DISCARD);
-                xs_return!(ctx, iv);
-            }
-        }
-        loader boot_Foo;
-    }
-  #+END_SRC
-  #+BEGIN_NOTES
-  Combined it looks like this.
-
-  We can't just use result of =get_av()= as array, because it is an =Option= now, a different type. As shown before, it would be a compiler error if we tried.
-
-  API also forced me to decide early what I want to do with array element, so whatever happens inside =undef_array= does not matter.
-
-  =xs_return!= is a Rust macro that handles pushing return values from the =badsub= to the Perl stack and doing type conversions and other necessary bookkeeping as well.
-  #+END_NOTES
-* COMMENT Call builder prototype.
-    http://is.gd/hDZvNU
-* COMMENT Implementation details
-** libouroboros for perl macros
-** perl-sys for function declarations
-** perl-xs for safe wrappers
-* Problems
-  #+BEGIN_NOTES
-  This story would not be complete without mentioning some problems inherent to this approach.
-  #+END_NOTES
-** Exception handling
-   =panic= and =die=
-   #+BEGIN_NOTES
-   Both Rust and Perl have their own ways of dealing with exceptions, which are, of course, not compatible with each other. It is not clear yet, but I expect that making two systems work together will add quite a bit of overhead.
-   #+END_NOTES
-** No direct access to Perl internals
-   #+BEGIN_NOTES
-   Rust bindings cover only documented public part of Perl's API, but in C it is possible to call any Perl internal function.
-   #+END_NOTES
-** Rust supports far less platforms than Perl
-   No IBM z/390, MS-DOS or HP-UX support
-   #+BEGIN_NOTES
-   Rust supports far fewer operating systems and processor architectures than Perl.
-   #+END_NOTES
-** New language
-   #+BEGIN_NOTES
-   And it is a big new language to learn.
-   #+END_NOTES
-* Questions?
-  https://github.com/vickenty/perl-xs
+  http://github.com/vickenty/perl-xs

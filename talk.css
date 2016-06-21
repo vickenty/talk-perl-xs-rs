@@ -1,0 +1,11 @@
+:-webkit-full-screen {
+    cursor: none;
+}
+
+pre {
+    font-family: "Luculent" !important
+}
+
+h3 {
+    text-transform: none !important;
+}
