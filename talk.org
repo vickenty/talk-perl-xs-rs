@@ -216,7 +216,6 @@
          }
      }
    #+END_SRC
-
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
@@ -253,64 +252,28 @@
          }
      }
    #+END_SRC
-* Benchmarks
-
-** sum array elements
-   | Perl | 2.53s |  766% |
-   | Rust | 3.34s | 1012% |
-   | XS   | 0.33s |  100% |
-   #+TBLFM: $3 = 100 * $2 / @3$2 ; %d%%
-
-    
-
-** try/catch on every line
+** sum array
    #+BEGIN_SRC rust -n
-     xs! {
-         package Array::Util;
-
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av().expect("not an array ref");
-             let mut sum = 0.0;
-             for index in 0..array.top_index() + 1 {
-                 if let Some(item) = array.fetch(index) {
-                     sum += item;
-                 }
-             }
-             xs_return!(ctx, sum);
-         }
+     sub sum_array(ctx) {
+         let param: SV = ctx.st_fetch(0);
+         let array: AV = param.deref_av().expect("not an array ref");
+         let sum: NV = array.iter()
+             .map(|v| v.unwrap_or(0.0))
+             .sum();
+         xs_return!(ctx, sum);
      }
    #+END_SRC
-** sum array elements
-   | Perl | 2.56s | 775% |
-   | Rust | 0.88s | 266% |
-   | XS   | 0.33s | 100% |
-   #+TBLFM: $3 = 100 * $2 / @3$2 ; %d%%
-
-   (without catching exceptions)
-
-** greatest common divisor
-   | Perl | 0.73s | 730% |
-   | Rust | 0.18s | 180% |
-   | XS   | 0.10s | 100% |
-   #+TBLFM: $3 = 100 * $2 / @3$2 ; %d%%
-
-    
-
-** greatest common divisor
-   | Perl | 0.81s | 810% |
-   | Rust | 0.11s | 110% |
-   | XS   | 0.10s | 100% |
-   #+TBLFM: $3 = 100 * $2 / @3$2 ; %d%%
-
-   (without catching exceptions)
-
+* Benchmarks
+   | Perl      | 2.072s | 100% |
+   | Rust loop | 0.691s |  33% |
+   | Rust iter | 0.690s |  33% |
+   | XS        | 0.150s |   7% |
+   #+TBLFM: $3 = 100 * $2 / @1$2 ; %d%%
 * Conclusion
   #+ATTR_REVEAL: :frag (reveal)
   * it works
   * it is safer
   * it is slower
-
 * FIN
   #+BEGIN_SRC rust
      xs! {

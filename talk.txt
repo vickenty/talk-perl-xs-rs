@@ -62,12 +62,4 @@ array.fetch can automatically convert element to a basic type. Since it happens 
 
 This talk wouldn't be complete without some benchmarks.
 
-I made two tests, one that uses Perl API heavily to sum array elements, and another that uses Perl API a little and implements greatest common divisor algorithm. When I was writing these benchmarks I expected to see them slower than XS, but what I didn't expect was to see them slower than pure Perl.
-
-Remember I mentioned that resources on stack need to be protected from Perl exceptions to avoid leaks? This applies to reference counts as well. Let me go back for a second. Every call to the Perl API is wrapped behind the scenes in a try/catch block needed to unwind through Rust part of the stack and update refcounts. It turns out that my naive implementation is horribly slow. This is nice to have, but preventing leaks is not strictly necessary for memory safety - while bad, leaks do not compromise security of the application, so there is more freedom here. Maybe we can have programmer do that in the future, but for now lets try to disable them.
-
-And performance gets better if exceptions checks are disabled. It is still not quite as fast as XS, but at least it is faster than Perl.
-
-Greatest common divisor is a simple program. We get two integers from Perl, do some simple math in a loop, and return an integer back. Performance gain from doing computation in machine code outweights the horrible overhead, and while Rust is still slower than XS, it goes faster than pure Perl. With exception checks disabled Rust is only slightly behind the XS version.
-
-To , it is not great, but it is possible. Rust is not a magic bullet, it only tries to prevent all bugs, but only a small fraction of pointer related bugs.
+To summarize, it is not great, but it is possible. Rust is not a magic bullet, it does not try to prevent all bugs, but only a small fraction of pointer related bugs.
