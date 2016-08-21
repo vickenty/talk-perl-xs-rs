@@ -58,4 +58,16 @@ Array fetch can automatically convert the element to a basic type. Since it happ
 
 This talk wouldn't be complete without some benchmarks.
 
+I tested the two versions of the program we just discussed. The Rust version is about three times faster than pure Perl implementation, and XS is about five times faster than that.
+
+Rust itself is comparable to C in terms of performance, and most of the difference between Rust and XS versions come from how I handled XS API in Rust.
+
+First, I treat Perl as a black box, making a function call for every single thing, while XS uses macros to inline do many common operations. Doing the same thing in Rust is not impossible, but would require a considerable effort at this moment.
+
+Second reason is reference counting. To guarantee that user code stays free of dangling pointers, I need to tell the interpreter about every pointer kept on the stack.
+
+And the third reason is exception handling. Rust has destructors, and the compiler automatically insert code to do cleanups when variables leave scope. For example if user code allocated some memory, a destructor be called to free it. This is used extensively for all sorts of things, including reference counting I just mentioned.
+
+Now imagine that code called from a Rust module croaks. When this happens, interpreter will jump to the closest eval block, skipping everything in between. To prevent that from happening, a guard layers are inserted on both sides of Rust code. The guard block on the right, catches Perl exceptions and converts them into Rust panics. Panics bubble through the stack doing necesary cleanups and are converted back into Perl exceptions when they reach the left guard.
+
 To summarize, it is not great, but it is possible. Rust is not a magic bullet, it does not try to prevent all bugs, but only a small fraction of pointer-related bugs.

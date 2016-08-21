@@ -123,7 +123,7 @@
 * Rust
   #+ATTR_REVEAL: :frag (reveal)
   - unsafe code
-  - safe abstractions
+  - safe abstractions around unsafe code
 * Rust XS
   safe code → no segfaults
 ** sum array
@@ -269,6 +269,19 @@
    | Rust iter | 0.690s |  33% |
    | XS        | 0.150s |   7% |
    #+TBLFM: $3 = 100 * $2 / @1$2 ; %d%%
+* Why so slow?
+  #+ATTR_REVEAL: :frag (reveal)
+  * no hot path inlining
+  * reference counting
+  * exception handling
+** COMMENT Exceptions
+   [[file:xcpt-1.svg]]
+** Exceptions
+   file:xcpt-2.svg
+** Exceptions
+   [[file:xcpt-3.svg]]
+** Exceptions
+   file:xcpt-4.svg
 * Conclusion
   #+ATTR_REVEAL: :frag (reveal)
   * it works
