@@ -1,65 +1,61 @@
 Writing Perl extensions in Rust
 
-Hello. My name is Vikentiy Fesunov, I write perl code for Booking.com and as you have probably heard, we're hiring. If you are in the market for a job, come talk to us.
-
-But this talk is not related to my work at booking.com, but instead is about this new shiny thing called Rust and how it works with Perl.
-
 Perl interpreter is written in C, and, naturally, it is the language of choice for writing Perl extensions. C is a very powerful language, but with great power comes great responsibility. Where Perl has run-time checks to catch coding errors, C instead relies on the programmer to follow the rules.
 
-For example, when a value is dereferenced in Perl, interpreter will check and generate a run-time error if value is not a reference or undefined. In C when a pointer is dereferenced, compiler just assumes it will be valid when program runs.
+For example, when a value is dereferenced in Perl, the interpreter will check and generate a run-time error if a value is not a reference or is undefined. In C, the compiler just assumes it will be valid when the program runs.
 
-C is really not an easy language to write correct programs in.
+It is not easy to write correct programs in C.
 
-- lots of functions in XS API may return NULL. Reading from a NULL pointer is not okay, may or may not crash your program, so programmers must be dilligent and check all returned values before using them.
+Lots of functions in XS API may return NULL. Reading from a NULL pointer is not okay, may or may not crash your program, so programmers must be diligent and check all returned values before using them.
 
-- there is no automatic reference counting in C and programmers are expected to manually track lifetime of every piece of memory they have a pointer to. Reading from a pointer to memory that was released back to OS may or may not crash the program, and there is no way to prevent this at but to be extra careful during development.
+There is no automatic reference counting in C and programmers are required to track the lifetime of every piece of memory. Reading from a pointer to memory that was released back to OS may or may not crash the program, and there is no way to prevent this but to be extra careful during development.
 
-- they are also required to keep track of size of every piece of memory they have a pointer to.
+Programmers also need to keep track of the size of every piece of memory. Reading or writing past the end of an array is just as bad as accessing freed memory.
 
-- and there are many more. Just the list of these rules that C compiler assumes to be followed takes fifteen pages in the language standard.
+And there are much more. Just the list of these rules that C compiler assumes to be followed takes fifteen pages in the language standard.
 
 Perl XS API is not making life any easier.
 
-- what does this function return? Contrary to what its name suggests, it returns index of the last element.
+What does this function return? Contrary to what its name suggests, it returns the index of the last element.
 
-- C does not have facilities to support automatic reference counting and naturally this becomes a responsibility of the programmer. To be fast, Perl does not always count C pointers as references, and similar looking pointers require different treatment depending on the situation. This comes up a lot in XS code.
+C does not have facilities to support automatic reference counting, and naturally, this becomes a responsibility of the programmer. To be fast, Perl does not always count every pointer as a reference, and similar looking pointers require different treatment depending on the situation.
 
-- C does not have exceptions, while Perl does. Open files, allocated memory and any other resources held by stack local variables have to be protected from Perl exceptions to avoid leaks.
+C does not have exceptions, while Perl does. Open files, allocated memory and any other resources held by stack local variables have to be protected from Perl exceptions to avoid leaks.
 
 I'm not saying all this to convince you that C, XS or Perl are bad or wrong in any way. My point is that there is a lot to worry about when writing C and XS. Mistakes in C code don't just make programs crash once in a while, they cause serious security vulnerabilities as well.
 
-Rust is a new language that is basically built around the idea that being careful is not enough. It is a compiled, statically typed language with focus on memory safe programming. It is also binary compatible with C: Rust can call functions written in C and vice versa.
+Rust is a new language that is built around the idea that being careful is not enough. It is a compiled, statically typed language with a focus on memory safe programming. It is also binary compatible with C: Rust can call functions written in C and vice versa.
 
-(In particular, being binary compatible with C means that) Rust can do the same memory operations that C can - do pointer arithmetic, cast pointers between different types, read and write arbitrary memory locations. What is different, is that these and few other operations are considered unsafe in Rust and are only allowed inside special code blocks.
+In particular, being binary compatible with C means that Rust can do the same memory operations that C can - do pointer arithmetic, cast pointers between different types, read and write arbitrary memory locations. What is different, is that these and few other operations are considered unsafe in Rust and are only allowed inside special code blocks.
 
-Handling pointers is very common in C programs, so one might think these unsafe code blocks would be everywhere. Many of Rust features are aimed at making unsafe code either not necessary, or at least well contained and isolated behind an abstraction.
+Handling pointers is very common in C programs, so one might think these unsafe code blocks would be everywhere. Many of Rust features are aimed at making unsafe code either not necessary, or at least well contained and isolated behind a safe interface.
 
-This idea is not a new at all. Perl itself can be viewed as a safe abstraction around unsafe C code, but with a different set of trade offs. Perl XS API has this too. Internally, scalar variables are quite complex with several different structures used at the same time, but this is something programmer doesn't have to know or worry about as long as they are using official API.
+This idea is not a new at all. Perl itself can be viewed as a safe abstraction around unsafe C code, but with a different set of tradeoffs. Perl XS API has this too. Internally, scalar variables are quite complex with several different structures used at the same time, but this is something programmer doesn't have to know or worry about as long as they are using official API.
 
 This is what 'perl-xs' Rust package tries to do. It tries to abstract away low level details of using the Perl API, and provide a safe high-level interface while still using a compiled language and keeping some of performance benefits of C XS. And by safe I mean that it should be impossible to crash the interpreter or corrupt its internal state by making a mistake in the Rust program.
 
 Let's write some code.
 
-First we start with bare minimum skeleton of a subroutine. Words that end with an exclamation mark are rust macro invocations. xs macro sets up module structure in a way that is compatible with XS using a pseudo-perl syntax.
+First, we start with the bare minimum skeleton of a subroutine. Words that end with an exclamation mark are rust macro invocations. XS macro sets up module structure in a way that is compatible with XS using a pseudo-perl syntax.
 
-Each sub get a single context argument that represents the Perl interpreter and provides access to the argument stack. xs_return is a macro that takes a variable number of arguments, pushes them onto the stack and returns from the subroutine, all in one line.
+Each sub gets a single context argument that represents the Perl interpreter and provides access to the argument stack. xs_return is a macro that takes a variable number of arguments, pushes them onto the stack and returns from the subroutine, all in one line.
 
 Then we pull an argument from the Perl stack. st_fetch will panic if there are not enough arguments, but we could also check explicitly and die with a more user-friendly message.
 
 Where possible, Rust API uses the same names as C, so scalar values are still SVs, arrays are AVs, and so on.
 
-What's different, is that there are no pointers here. Reference counted Perl objects are represented as smart handles. To meet the safety goals I mentioned earler each stack local variable is reference counted.
+What's different, is that there are no pointers here. Reference counted Perl objects are represented as smart handles. To meet the safety goals I mentioned earlier each stack local variable is reference counted.
 
 The argument is an array reference, so it needs to be dereferenced first. But what happens if param is not a reference? In C deref_av could return a NULL pointer, but Rust has a special type, Option, to handle this situation. Option wraps around the actual value, so it is impossible to use the wrapped value without checking first if it is there or not.
 
-This program does not compile, because I forgot to check. Option comes with a number of handy methods. expect is a rust equivalent of common 'or die' Perl idiom.
+This program does not compile because I forgot to check. Option type comes with many handy methods. Expect is the Rust equivalent of the common 'or die' Perl idiom.
 
-Then we need a variable to hold the results as we go over the array. Rust can infer types of local variables most of the time, so type annotation are mostly optional.
+Then we need a variable to hold the results as we go over the array. Rust can infer types of local variables most of the time, so type annotations are mostly optional.
 
-Inside the loop we call fetch on the array to get each element. In C array fetch function may return NULL if array element does not exists at a given index, so Rust API uses option type again. This time program just checks the result explicitly to skip over empty slots in the array. 
+Inside the loop, we call fetch on the array to get each element. In C array fetch function may return NULL if array element does not exist at a given index, so Rust API uses option type again. This time, the program just checks the result explicitly to skip over empty slots in the array. 
 
-array.fetch can automatically convert element to a basic type. Since it happens immediately after load, it can do it without manipulating element's reference count. In this case everything aligns nicely and compiler is able to figure out that program wants a floating point number. If there were any ambiguity, the program wouldn't compile. FIXME
+Array fetch can automatically convert the element to a basic type. Since it happens immediately after the fetch, it can be done without manipulating element's reference count. In this case, everything aligns nicely, and the compiler can figure out that program wants a floating point number. If there were any ambiguity, the program wouldn't compile. 
 
 This talk wouldn't be complete without some benchmarks.
 
-To summarize, it is not great, but it is possible. Rust is not a magic bullet, it does not try to prevent all bugs, but only a small fraction of pointer related bugs.
+To summarize, it is not great, but it is possible. Rust is not a magic bullet, it does not try to prevent all bugs, but only a small fraction of pointer-related bugs.
