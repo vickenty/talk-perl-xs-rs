@@ -9,3 +9,7 @@ pre {
 h3 {
     text-transform: none !important;
 }
+
+li {
+    overflow: visible !important;
+}
