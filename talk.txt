@@ -1,6 +1,6 @@
 Writing Perl extensions in Rust
 
-Perl interpreter is written in C, and, naturally, it is the language of choice for writing Perl extensions. C is a very powerful language, but with great power comes great responsibility. Where Perl has run-time checks to catch coding errors, C instead relies on the programmer to follow the rules.
+Perl interpreter is written in C, and, naturally, it is the language of choice for writing Perl extensions. C is a very powerful language, but it is a sharp tool and must be used with care. Where Perl has run-time checks to catch coding errors, C instead relies on the programmer to follow the rules.
 
 For example, when a value is dereferenced in Perl, the interpreter will check and generate a run-time error if a value is not a reference or is undefined. In C, the compiler just assumes it will be valid when the program runs.
 
