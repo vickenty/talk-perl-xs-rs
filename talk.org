@@ -36,20 +36,18 @@
 # Local Variables:
 # org-html-postamble: nil
 # End:
+#+BEGIN_NOTES
+CLICK THE TIMER
+#+END_NOTES
 * We're hiring
   http://workingatbooking.com
+* Perl extensions
   #+BEGIN_NOTES
-  come talk to us
-  #+END_NOTES
-* XS
-  #+BEGIN_NOTES
-  perl in c
-  great power great resp
-  perl checks, c assumes
+  interpreter, sharp tool, checks
   #+END_NOTES
 * C is not easy
   #+BEGIN_NOTES
-  perl reference, c pointer deref
+  reference example
   #+END_NOTES
 ** null pointers
    #+BEGIN_SRC c
@@ -57,9 +55,6 @@
      SV** item = av_fetch(array, 0);
    #+END_SRC
    #+BEGIN_NOTES
-   functions return null
-   dereferencing not okay
-   must check
    #+END_NOTES
 ** dangling pointers
    #+BEGIN_SRC c
@@ -101,31 +96,26 @@
    // but
    XPUSHs(sv_2mortal(av_delete(array, 0)))
    #+END_SRC
-   #+BEGIN_NOTES
-   same pointer, different actions
-   #+END_NOTES
 ** exceptions
    #+BEGIN_SRC c
    FILE *f = fopen("output", "w");
    fprintf(f, "%d", SvIV(value));
    fclose(f);
    #+END_SRC
-* Just be careful, okay?
-  #+BEGIN_NOTES
-  not to say perl, xs or c are bad
-  a lot to worry, stakes are high
-  #+END_NOTES
+* Just be careful?
   #+BEGIN_QUOTE
-   We must do better.
-   #+END_QUOTE
+    We must do better.
+  #+END_QUOTE
   --- Bjarne Stroustrup, 2015
   #+REVEAL_HTML: <small> http://www.stroustrup.com/resource-model.pdf </small>
 * Rust
+  http://rust-lang.org
   #+ATTR_REVEAL: :frag (reveal)
-  - unsafe code
-  - safe abstractions around unsafe code
+  * prevents segfaults
+  * compatible with c
+  * can do unsafe code if needed
+  * safe abstractions
 * Rust XS
-  safe code → no segfaults
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
@@ -144,6 +134,9 @@
          }
      }
    #+END_SRC
+   #+BEGIN_NOTES
+   skeleton, macros, context
+   #+END_NOTES
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
@@ -162,6 +155,9 @@
          }
      }
    #+END_SRC
+   #+BEGIN_NOTES
+   get element, same names, no pointers, reference counts
+   #+END_NOTES
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
@@ -180,6 +176,9 @@
          }
      }
    #+END_SRC
+   #+BEGIN_NOTES
+   get array, not a reference, option
+   #+END_NOTES
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
@@ -198,6 +197,9 @@
          }
      }
    #+END_SRC
+   #+BEGIN_NOTES
+   does not compile, need to check
+   #+END_NOTES
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
@@ -216,6 +218,9 @@
          }
      }
    #+END_SRC
+   #+BEGIN_NOTES
+   common or die idiom
+   #+END_NOTES
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
@@ -234,6 +239,9 @@
          }
      }
    #+END_SRC
+   #+BEGIN_NOTES
+   type inference
+   #+END_NOTES
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
@@ -341,22 +349,35 @@
    #+TBLFM: $3 = 100 * $2 / @1$2 ; %d%%
 * Why so slow?
   #+ATTR_REVEAL: :frag (reveal)
-  * no hot path inlining
   * reference counting
+  * no hot path inlining
   * exception handling
-** COMMENT Exceptions
+** COMMENT exceptions
    [[file:xcpt-1.svg]]
-** Exceptions
+** exceptions
    file:xcpt-2.svg
-** Exceptions
+   #+BEGIN_NOTES
+   destructors, automatically called code, reference counting
+   #+END_NOTES
+** exceptions
    [[file:xcpt-3.svg]]
-** Exceptions
+   #+BEGIN_NOTES
+   what xs api croaks
+   #+END_NOTES
+** exceptions
    file:xcpt-4.svg
+   #+BEGIN_NOTES
+   catch, unwind, resume
+   #+END_NOTES
 * Conclusion
   #+ATTR_REVEAL: :frag (reveal)
   * it works
   * it is safer
   * it is slower
+* Thanks
+  * Booking.com
+  * p5pclub
+  * #rust and the Rust community
 * FIN
   #+BEGIN_SRC rust
      xs! {
