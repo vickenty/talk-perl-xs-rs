@@ -2,9 +2,7 @@ Writing Perl extensions in Rust
 
 Perl interpreter is written in C, and, naturally, it is the language of choice for writing Perl extensions. C is a very powerful language, but it is a sharp tool and must be used with care. Where Perl has run-time checks to catch coding errors, C instead relies on the programmer to follow the rules.
 
-For example, when a value is dereferenced in Perl, the interpreter will check and generate a run-time error if a value is not a reference or is undefined. In C, the compiler just assumes it will be valid when the program runs.
-
-It is not easy to write correct programs in C.
+For example, when a value is dereferenced in Perl, the interpreter will check and generate a run-time error if a value is not undefined. In C, the compiler just assumes it will be valid when the program runs.
 
 Lots of functions in XS API may return NULL. Reading from a NULL pointer is not okay, may or may not crash your program, so programmers must be diligent and check all returned values before using them.
 
@@ -24,7 +22,9 @@ C does not have exceptions, while Perl does. Open files, allocated memory and an
 
 I'm not saying all this to convince you that C, XS or Perl are bad or wrong in any way. My point is that there is a lot to worry about when writing C and XS. Mistakes in C code don't just make programs crash once in a while, they cause serious security vulnerabilities as well.
 
-Rust is a new language that is built around the idea that being careful is not enough. It is a compiled, statically typed language with a focus on memory safe programming. It is also binary compatible with C: Rust can call functions written in C and vice versa.
+Rust is a new language that is built around the idea that being careful is not enough. It is a compiled, statically typed language with a focus on memory safe programming.
+
+It is also binary compatible with C: Rust can call functions written in C and vice versa.
 
 In particular, being binary compatible with C means that Rust can do the same memory operations that C can - do pointer arithmetic, cast pointers between different types, read and write arbitrary memory locations. What is different, is that these and few other operations are considered unsafe in Rust and are only allowed inside special code blocks.
 
