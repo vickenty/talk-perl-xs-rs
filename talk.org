@@ -252,15 +252,85 @@
          }
      }
    #+END_SRC
-** sum array
+** sum array, take 2
    #+BEGIN_SRC rust -n
-     sub sum_array(ctx) {
-         let param: SV = ctx.st_fetch(0);
-         let array: AV = param.deref_av().expect("not an array ref");
-         let sum: NV = array.iter()
-             .map(|v| v.unwrap_or(0.0))
-             .sum();
-         xs_return!(ctx, sum);
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av().expect("not an array ref");
+             let sum: NV =
+
+
+
+
+
+             xs_return!(ctx, sum);
+         }
+     }
+   #+END_SRC
+   #+BEGIN_NOTES
+   rewind
+   #+END_NOTES
+** sum array, take 2
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av().expect("not an array ref");
+             let sum: NV = array.iter()
+
+
+
+
+
+             xs_return!(ctx, sum);
+         }
+     }
+   #+END_SRC
+   #+BEGIN_NOTES
+   iterator
+   #+END_NOTES
+** sum array, take 2
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av().expect("not an array ref");
+             let sum: NV = array.iter()
+                 .map(|v| v.unwrap_or(0.0))
+
+
+
+
+             xs_return!(ctx, sum);
+         }
+     }
+   #+END_SRC
+   #+BEGIN_NOTES
+   map, code block, unwrap_or == '//'
+   #+END_NOTES
+** sum array, take 2
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx) {
+             let param: SV = ctx.st_fetch(0);
+             let array: AV = param.deref_av().expect("not an array ref");
+             let sum: NV = array.iter()
+                 .map(|v| v.unwrap_or(0.0))
+                 .sum();
+
+
+
+             xs_return!(ctx, sum);
+         }
      }
    #+END_SRC
 * Benchmarks
