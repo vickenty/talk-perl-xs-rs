@@ -54,20 +54,30 @@ Then we need a variable to hold the results as we go over the array. Rust can in
 
 Inside the loop, we call fetch on the array to get each element. In C array fetch function may return NULL if array element does not exist at a given index, so Rust API uses option type again. This time, the program just checks the result explicitly to skip over empty slots in the array. 
 
-Array fetch can automatically convert the element to a basic type. Since it happens immediately after the fetch, it can be done without manipulating element's reference count. In this case, everything aligns nicely, and the compiler can figure out that program wants a floating point number. If there were any ambiguity, the program wouldn't compile. 
+Array fetch can automatically convert the element to a basic type. Since it happens immediately after the fetch, it can be done without manipulating element's reference count. In this case, everything aligns nicely, and the compiler can figure out that program wants a floating point number. If there were any ambiguity, the program wouldn't compile.
+
+This isn't bad, but its a lot of code for a simple thing. Lets rewind a little bit and do this again.
+
+Rust standard library contains iterator type, and it comes with about 50 different useful methods.
+
+Like map. Map gets a code block, that replaces undefined values with a zero.
+
+Another standard iterator method is sum. And that's it. A few short lines instead of a loop.
 
 This talk wouldn't be complete without some benchmarks.
 
 I tested the two versions of the program we just discussed. The Rust version is about three times faster than pure Perl implementation, and XS is about five times faster than that.
 
-Rust itself is comparable to C in terms of performance, and most of the difference between Rust and XS versions come from how I handled XS API in Rust.
+Rust itself is comparable to C in terms of performance, and most of the difference between Rust and XS versions come from how XS API is handled in Rust.
 
-First, I treat Perl as a black box, making a function call for every single thing, while XS uses macros to inline do many common operations. Doing the same thing in Rust is not impossible, but would require a considerable effort at this moment.
+First reason is reference counting. To guarantee that user code stays free of dangling pointers, I need to tell the interpreter about every pointer kept on the stack.
 
-Second reason is reference counting. To guarantee that user code stays free of dangling pointers, I need to tell the interpreter about every pointer kept on the stack.
+Second, while XS uses macros to inline do many common operations. Doing the same thing in Rust is not impossible, but would require a considerable effort at this moment.
 
-And the third reason is exception handling. Rust has destructors, and the compiler automatically insert code to do cleanups when variables leave scope. For example if user code allocated some memory, a destructor be called to free it. This is used extensively for all sorts of things, including reference counting I just mentioned.
+And the third reason is handling exceptions, in both Perl and Rust code. Why it is a problem?
+
+Because Rust has destructors, the compiler automatically inserts code to do cleanups when variables leave scope. For example if user code allocated some memory, a destructor be called to free it. This is used extensively for all sorts of things, including automatic reference counting I just mentioned.
 
 Now imagine that code called from a Rust module croaks. When this happens, interpreter will jump to the closest eval block, skipping everything in between. To prevent that from happening, a guard layers are inserted on both sides of Rust code. The guard block on the right, catches Perl exceptions and converts them into Rust panics. Panics bubble through the stack doing necesary cleanups and are converted back into Perl exceptions when they reach the left guard.
 
-To summarize, it is not great, but it is possible. Rust is not a magic bullet, it does not try to prevent all bugs, but only a small fraction of pointer-related bugs.
+To summarise, it is indeed possible to write a Perl extension in Rust. It is possible to do it in a safe and relatively efficient manner.
