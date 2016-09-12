@@ -1,5 +1,7 @@
 # Writing Perl extensions in Rust
 
+[Video](https://www.youtube.com/watch?v=EZfm5rEnqBc)
+
 [Slides](https://vickenty.github.io/talk-perl-xs-rs)
 
 [Text version](talk.txt)
