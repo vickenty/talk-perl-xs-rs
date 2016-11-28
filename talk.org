@@ -342,10 +342,10 @@ CLICK THE TIMER
      }
    #+END_SRC
 * Benchmarks
-   | Perl      | 2.072s | 100% |
-   | Rust loop | 0.691s |  33% |
-   | Rust iter | 0.690s |  33% |
-   | XS        | 0.150s |   7% |
+   | Perl      | 1.003s | 100% |
+   | Rust loop | 0.645s |  64% |
+   | Rust iter | 0.637s |  63% |
+   | XS        | 0.164s |  16% |
    #+TBLFM: $3 = 100 * $2 / @1$2 ; %d%%
 * Why so slow?
   #+ATTR_REVEAL: :frag (reveal)
