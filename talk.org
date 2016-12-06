@@ -121,16 +121,13 @@ CLICK THE TIMER
      xs! {
          package Array::Util;
 
-         sub sum_array(ctx) {
+         sub sum_array(ctx, array_ref: SV) {
+             let mut sum = 0.0;
 
 
 
 
-
-
-
-
-             xs_return!(ctx, 0.0);
+             xs_return!(ctx, sum);
          }
      }
    #+END_SRC
@@ -142,12 +139,9 @@ CLICK THE TIMER
      xs! {
          package Array::Util;
 
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-
-
-
-
+         sub sum_array(ctx, array_ref: SV) {
+             let mut sum = 0.0;
+             let array: AV = array_ref.deref_av();
 
 
 
@@ -156,20 +150,17 @@ CLICK THE TIMER
      }
    #+END_SRC
    #+BEGIN_NOTES
-   get element, same names, no pointers, reference counts
+   reference counting
    #+END_NOTES
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
          package Array::Util;
 
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av();
-
-
-
-
+         sub sum_array(ctx, array_ref: SV) {
+             let mut sum = 0.0;
+             let array: AV = array_ref.deref_av();
+             // ERROR: AV expected, but have Option<AV>
 
 
              xs_return!(ctx, 0.0);
@@ -184,55 +175,28 @@ CLICK THE TIMER
      xs! {
          package Array::Util;
 
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av(); 
-             //   ERROR: AV expected, but have Option<AV>
-
-
-
-
-
-             xs_return!(ctx, 0.0);
-         }
-     }
-   #+END_SRC
-   #+BEGIN_NOTES
-   does not compile, need to check
-   #+END_NOTES
-** sum array
-   #+BEGIN_SRC rust -n
-     xs! {
-         package Array::Util;
-
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av().expect("not an array ref");
-
-
-
-
-
-
-             xs_return!(ctx, 0.0);
-         }
-     }
-   #+END_SRC
-   #+BEGIN_NOTES
-   common or die idiom
-   #+END_NOTES
-** sum array
-   #+BEGIN_SRC rust -n
-     xs! {
-         package Array::Util;
-
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av().expect("not an array ref");
+         sub sum_array(ctx, array_ref: SV) {
              let mut sum = 0.0;
-             for index in 0..array.top_index() + 1 {
-             
+             let array: AV = array_ref.deref_av().expect("an array reference");
 
+
+
+             xs_return!(ctx, 0.0);
+         }
+     }
+   #+END_SRC
+   #+BEGIN_NOTES
+   expect is 'or die' in perl
+   #+END_NOTES
+** sum array
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx, array_ref: SV) {
+             let mut sum = 0.0;
+             let array: AV = array_ref.deref_av().expect("an array reference");
+             for index in 0..array.top_index() + 1 {
 
              }
              xs_return!(ctx, sum);
@@ -240,22 +204,71 @@ CLICK THE TIMER
      }
    #+END_SRC
    #+BEGIN_NOTES
-   type inference
+   set up the loop
    #+END_NOTES
 ** sum array
    #+BEGIN_SRC rust -n
      xs! {
          package Array::Util;
 
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av().expect("not an array ref");
+         sub sum_array(ctx, array_ref: SV) {
              let mut sum = 0.0;
+             let array: AV = array_ref.deref_av().expect("an array reference");
              for index in 0..array.top_index() + 1 {
-                 if let Some(item) = array.fetch(index) {
-                     sum += item;
-                 }
+                 sum += array.fetch(index);
              }
+             xs_return!(ctx, sum);
+         }
+     }
+   #+END_SRC
+   #+BEGIN_NOTES
+   get an element, add it to sum
+   #+END_NOTES
+** sum array
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx, array_ref: SV) {
+             let mut sum = 0.0;
+             let array: AV = array_ref.deref_av().expect("an array reference");
+             for index in 0..array.top_index() + 1 {
+                 sum += array.fetch(index); // ERROR
+             }
+             xs_return!(ctx, sum);
+         }
+     }
+   #+END_SRC
+   #+BEGIN_NOTES
+   fetch in C may return null, so rust returns Option again
+   #+END_NOTES
+** sum array
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx, array_ref: SV) {
+             let mut sum = 0.0;
+             let array: AV = array_ref.deref_av().expect("an array reference");
+             for index in 0..array.top_index() + 1 {
+                 sum += array.fetch(index).unwrap_or(0.0);
+             }
+             xs_return!(ctx, sum);
+         }
+     }
+   #+END_SRC
+   #+BEGIN_NOTES
+   unwrap_or is similar to the 'defined or' operator, will replace missing values with zero
+   #+END_NOTES
+** sum array, take 2
+   #+BEGIN_SRC rust -n
+     xs! {
+         package Array::Util;
+
+         sub sum_array(ctx, array: AV) {
+             let sum
+
+
              xs_return!(ctx, sum);
          }
      }
@@ -265,78 +278,36 @@ CLICK THE TIMER
      xs! {
          package Array::Util;
 
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av().expect("not an array ref");
-             let sum: NV =
-
-
-
-
-
-             xs_return!(ctx, sum);
-         }
-     }
-   #+END_SRC
-   #+BEGIN_NOTES
-   rewind
-   #+END_NOTES
-** sum array, take 2
-   #+BEGIN_SRC rust -n
-     xs! {
-         package Array::Util;
-
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av().expect("not an array ref");
+         sub sum_array(ctx, array: AV) {
              let sum: NV = array.iter()
 
 
-
-
-
              xs_return!(ctx, sum);
          }
      }
    #+END_SRC
-   #+BEGIN_NOTES
-   iterator
-   #+END_NOTES
 ** sum array, take 2
    #+BEGIN_SRC rust -n
      xs! {
          package Array::Util;
 
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av().expect("not an array ref");
+         sub sum_array(ctx, array: AV) {
              let sum: NV = array.iter()
                  .map(|v| v.unwrap_or(0.0))
 
-
-
-
              xs_return!(ctx, sum);
          }
      }
    #+END_SRC
-   #+BEGIN_NOTES
-   map, code block, unwrap_or == '//'
-   #+END_NOTES
 ** sum array, take 2
    #+BEGIN_SRC rust -n
      xs! {
          package Array::Util;
 
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av().expect("not an array ref");
+         sub sum_array(ctx, array: AV) {
              let sum: NV = array.iter()
                  .map(|v| v.unwrap_or(0.0))
                  .sum();
-
-
-
              xs_return!(ctx, sum);
          }
      }
@@ -379,21 +350,16 @@ CLICK THE TIMER
   * p5pclub
   * #rust and the Rust community
 * FIN
-  #+BEGIN_SRC rust
-     xs! {
-         package Array::Util;
+  #+BEGIN_SRC rust -n
+    xs! {
+        package Array::Util;
 
-         sub sum_array(ctx) {
-             let param: SV = ctx.st_fetch(0);
-             let array: AV = param.deref_av().expect("not an array ref");
-             let mut sum = 0.0;
-             for index in 0..array.top_index() + 1 {
-                 if let Some(item) = array.fetch(index) {
-                     sum += item;
-                 }
-             }
-             xs_return!(ctx, sum);
-         }
-     }
+        sub sum_array(ctx, array: AV) {
+            let sum: NV = array.iter()
+                .map(|v| v.unwrap_or(0.0))
+                .sum();
+            xs_return!(ctx, sum);
+        }
+    }
   #+END_SRC
   http://github.com/vickenty/perl-xs
