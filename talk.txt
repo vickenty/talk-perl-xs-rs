@@ -38,7 +38,7 @@ Let's write some code.
 
 First, we start with the bare minimum skeleton of a subroutine. Words that end with an exclamation mark are rust macro invocations. XS macro sets up module structure in a way that is compatible with XS using a pseudo-perl syntax.
 
-Each sub gets a single context argument that represents the Perl interpreter and provides access to the argument stack. xs_return is a macro that takes a variable number of arguments, pushes them onto the stack and returns from the subroutine, all in one line.
+Each sub gets a single context argument that represents the Perl interpreter and provides access to the argument stack. xs_return can be used to return one or more arguments.
 
 Then we pull an argument from the Perl stack. st_fetch will panic if there are not enough arguments, but we could also check explicitly and die with a more user-friendly message.
 
